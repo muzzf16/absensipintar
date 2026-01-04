@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   // admin, supervisor, karyawan
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendances Attendance[]
+  visits      Visit[]
+  approvals   Approval[]
+}
+
+model Attendance {
+  id             String    @id @default(uuid())
+  userId         String
+  attendanceDate DateTime  @default(now()) // Stored as datetime, but conceptually date
+  checkIn        DateTime?
+  checkOut       DateTime?
+  
+  user User @relation(fields: [userId], references: [id])
+  visits Visit[]
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  latitude  Float
+  longitude Float
+  visits    Visit[]
+}
+
+model Visit {
+  id           String   @id @default(uuid())
+  userId       String
+  customerId   String
+  attendanceId String?
+  visitTime    DateTime @default(now())
+  purpose      String
+  notes        String?
+  latitude     Float
+  longitude    Float
+  photoUrl     String?
+  status       String   @default("pending") // pending, approved, rejected
+
+  user       User       @relation(fields: [userId], references: [id])
+  customer   Customer   @relation(fields: [customerId], references: [id])
+  attendance Attendance? @relation(fields: [attendanceId], references: [id])
+  approvals  Approval[]
+}
+
+model Approval {
+  id         String   @id @default(uuid())
+  visitId    String
+  approverId String
+  status     String   // approved, rejected
+  note       String?
+  approvedAt DateTime @default(now())
+
+  visit    Visit @relation(fields: [visitId], references: [id])
+  approver User  @relation(fields: [approverId], references: [id])
+}
