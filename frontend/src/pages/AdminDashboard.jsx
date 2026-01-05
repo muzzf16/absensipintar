@@ -152,7 +152,7 @@ const AdminDashboard = ({ user }) => {
 
 
 
-                    // ... inside render ...
+
                     {/* Report Card / Map View */}
                     {activeTab === 'peta' ? (
                         <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4">
