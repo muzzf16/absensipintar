@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Camera, MapPin, Plus, AlertCircle, X } from 'lucide-react';
 import api from '../utils/axiosConfig';
 
+const PRODUCT_OPTIONS = [
+    { code: 'TAB_UMUM', name: 'Tabungan Umum' },
+    { code: 'TAB_BERJANGKA', name: 'Tabungan Berjangka' },
+    { code: 'DEP_OS', name: 'Deposito' },
+    { code: 'KREDIT_MIKRO', name: 'Kredit Mikro' },
+    { code: 'KREDIT_KONSUMTIF', name: 'Kredit Konsumtif' },
+    { code: 'OTHER', name: 'Lainnya' }
+];
+
 const Visits = () => {
     const [showForm, setShowForm] = useState(false);
     const [visits, setVisits] = useState([]);
@@ -12,10 +21,17 @@ const Visits = () => {
     // Form State
     const [formData, setFormData] = useState({
         customerId: '',
-        purpose: '',
+        purpose: 'SERVICE_ONLY',
         notes: '',
-        photoUrl: '', // Optional, mock for now or use valid URL if upload imp.
+        photoUrl: '',
+        // Marketing Fields
+        marketingProducts: [], // Array of codes
+        prospectStatus: '', // NOT_INTERESTED, INTERESTED, IN_PROGRESS, REALIZED
+        potentialValue: '',
+        marketingNotes: '',
+        followUpAt: ''
     });
+
     const [location, setLocation] = useState(null); // { latitude, longitude }
     const [locError, setLocError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -73,6 +89,15 @@ const Visits = () => {
         );
     };
 
+    const handleProductToggle = (code) => {
+        const current = formData.marketingProducts;
+        if (current.includes(code)) {
+            setFormData({ ...formData, marketingProducts: current.filter(c => c !== code) });
+        } else {
+            setFormData({ ...formData, marketingProducts: [...current, code] });
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitError('');
@@ -83,13 +108,52 @@ const Visits = () => {
 
         setSubmitting(true);
         try {
-            await api.post('/visits', {
-                ...formData,
+            // Prepare payload
+            const payload = {
+                customerId: formData.customerId,
+                purpose: formData.purpose,
+                notes: formData.notes,
+                photoUrl: formData.photoUrl,
                 latitude: location.latitude,
-                longitude: location.longitude
-            });
+                longitude: location.longitude,
+            };
+
+            // Add Marketing Data if applicable
+            if (formData.purpose !== 'SERVICE_ONLY') {
+                payload.prospectStatus = formData.prospectStatus;
+                payload.potentialValue = formData.potentialValue;
+                payload.marketingNotes = formData.marketingNotes;
+                payload.followUpAt = formData.followUpAt;
+
+                // Transform products
+                if (formData.marketingProducts.length > 0) {
+                    payload.products = formData.marketingProducts.map(code => {
+                        const prod = PRODUCT_OPTIONS.find(p => p.code === code);
+                        return {
+                            productCode: code,
+                            productName: prod?.name || code,
+                            prospectStatus: null, // Default
+                            potentialValue: null  // Default
+                        };
+                    });
+                }
+            }
+
+            await api.post('/visits', payload);
+
             setShowForm(false);
-            setFormData({ customerId: '', purpose: '', notes: '', photoUrl: '' });
+            // Reset Form
+            setFormData({
+                customerId: '',
+                purpose: 'SERVICE_ONLY',
+                notes: '',
+                photoUrl: '',
+                marketingProducts: [],
+                prospectStatus: '',
+                potentialValue: '',
+                marketingNotes: '',
+                followUpAt: ''
+            });
             setLocation(null);
             fetchInitialData(); // Refresh list
         } catch (err) {
@@ -100,6 +164,8 @@ const Visits = () => {
     };
 
     if (loading) return <div className="p-4">Loading...</div>;
+
+    const isMarketing = formData.purpose !== 'SERVICE_ONLY';
 
     return (
         <div className="p-4 relative min-h-full pb-20">
@@ -126,13 +192,22 @@ const Visits = () => {
                             <div className="flex justify-between items-start mb-2">
                                 <h3 className="font-bold text-gray-800">{visit.customer?.name || 'Unknown Customer'}</h3>
                                 <span className={`text-xs px-2 py-1 rounded-full ${visit.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                        visit.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                            'bg-yellow-100 text-yellow-700'
+                                    visit.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                        'bg-yellow-100 text-yellow-700'
                                     }`}>
                                     {visit.status}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-600 mb-2">{visit.purpose}</p>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-semibold bg-gray-100 px-2 py-0.5 rounded text-gray-600">
+                                    {visit.purpose?.replace(/_/g, ' ')}
+                                </span>
+                                {visit.visitProducts && visit.visitProducts.length > 0 && (
+                                    <span className="text-xs text-blue-600 font-medium">
+                                        {visit.visitProducts.length} Product(s)
+                                    </span>
+                                )}
+                            </div>
                             <div className="flex items-center text-xs text-gray-400 gap-2">
                                 <MapPin size={12} />
                                 <span>{new Date(visit.visitTime).toLocaleString()}</span>
@@ -148,8 +223,8 @@ const Visits = () => {
                         onClick={() => setShowForm(true)}
                         disabled={attendanceStatus !== 'checked-in'}
                         className={`fixed bottom-20 right-4 p-4 rounded-full shadow-lg transition flex items-center justify-center ${attendanceStatus === 'checked-in'
-                                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             }`}
                     >
                         <Plus size={24} />
@@ -183,19 +258,96 @@ const Visits = () => {
                                 ))}
                             </select>
                         </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
-                            <input
-                                type="text"
-                                className="w-full border rounded-lg p-2"
-                                placeholder="e.g. Sales pitch"
+                            <select
+                                className="w-full border rounded-lg p-2 bg-gray-50"
                                 value={formData.purpose}
                                 onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
                                 required
-                            />
+                            >
+                                <option value="SERVICE_ONLY">Service Only</option>
+                                <option value="SERVICE_AND_OFFERING">Service & Offering</option>
+                                <option value="OFFERING_ONLY">Offering Only</option>
+                            </select>
                         </div>
+
+                        {/* Marketing Section Conditional Render */}
+                        {isMarketing && (
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-4">
+                                <h4 className="font-semibold text-blue-800 text-sm">Marketing & Offering</h4>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Products Offered</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {PRODUCT_OPTIONS.map(prod => (
+                                            <button
+                                                key={prod.code}
+                                                type="button"
+                                                onClick={() => handleProductToggle(prod.code)}
+                                                className={`px-3 py-1 rounded-full text-xs font-medium border ${formData.marketingProducts.includes(prod.code)
+                                                        ? 'bg-blue-600 text-white border-blue-600'
+                                                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {prod.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Prospect Status</label>
+                                    <select
+                                        className="w-full border rounded-lg p-2 text-sm"
+                                        value={formData.prospectStatus}
+                                        onChange={(e) => setFormData({ ...formData, prospectStatus: e.target.value })}
+                                    >
+                                        <option value="">Select Status...</option>
+                                        <option value="NOT_INTERESTED">Not Interested</option>
+                                        <option value="INTERESTED">Interested</option>
+                                        <option value="IN_PROGRESS">In Progress</option>
+                                        <option value="REALIZED">Realized / Closing</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Potential Value (Rp)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full border rounded-lg p-2 text-sm"
+                                        placeholder="Estimate Value (Optional)"
+                                        value={formData.potentialValue}
+                                        onChange={(e) => setFormData({ ...formData, potentialValue: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Marketing Notes</label>
+                                    <textarea
+                                        className="w-full border rounded-lg p-2 text-sm"
+                                        rows="2"
+                                        placeholder="Reaction, objections, etc."
+                                        value={formData.marketingNotes}
+                                        onChange={(e) => setFormData({ ...formData, marketingNotes: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Follow Up Date</label>
+                                    <input
+                                        type="datetime-local"
+                                        className="w-full border rounded-lg p-2 text-sm"
+                                        value={formData.followUpAt}
+                                        onChange={(e) => setFormData({ ...formData, followUpAt: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">General Notes</label>
                             <textarea
                                 className="w-full border rounded-lg p-2"
                                 rows="2"

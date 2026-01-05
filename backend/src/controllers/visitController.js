@@ -9,7 +9,12 @@ const createVisit = async (req, res) => {
         console.log("Body:", req.body);
         console.log("User:", req.user);
 
-        const { customerId, purpose, notes, latitude, longitude, photoUrl } = req.body;
+        const {
+            customerId, purpose, notes, latitude, longitude, photoUrl,
+            // New Marketing Fields
+            prospectStatus, potentialValue, marketingNotes, followUpAt,
+            products // Array of { productCode, productName, prospectStatus, potentialValue }
+        } = req.body;
         const userId = req.user.userId;
 
         if (!latitude || !longitude) {
@@ -65,19 +70,40 @@ const createVisit = async (req, res) => {
             });
         }
 
+        // Prepare Visit Data
+        const visitData = {
+            userId,
+            customerId,
+            attendanceId: attendance.id,
+            purpose,
+            notes,
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+            photoUrl,
+            status: 'pending',
+            visitTime: new Date(),
+            // New Fields
+            prospectStatus,
+            potentialValue: potentialValue ? parseFloat(potentialValue) : null,
+            marketingNotes,
+            followUpAt: followUpAt ? new Date(followUpAt) : null,
+        };
+
+        // Handle Visit Products Nested Create
+        if (products && Array.isArray(products) && products.length > 0) {
+            visitData.visitProducts = {
+                create: products.map(p => ({
+                    productCode: p.productCode,
+                    productName: p.productName,
+                    prospectStatus: p.prospectStatus,
+                    potentialValue: p.potentialValue ? parseFloat(p.potentialValue) : null
+                }))
+            };
+        }
+
         const visit = await prisma.visit.create({
-            data: {
-                userId,
-                customerId,
-                attendanceId: attendance.id, // Link to attendance
-                purpose,
-                notes,
-                latitude: parseFloat(latitude),
-                longitude: parseFloat(longitude),
-                photoUrl,
-                status: 'pending',
-                visitTime: new Date()
-            },
+            data: visitData,
+            include: { visitProducts: true } // Return created products
         });
 
         console.log("Visit Created:", visit);
@@ -120,7 +146,11 @@ const getVisits = async (req, res) => {
 
         const visits = await prisma.visit.findMany({
             where,
-            include: { user: { select: { name: true } }, customer: { select: { name: true } } },
+            include: {
+                user: { select: { name: true } },
+                customer: { select: { name: true } },
+                visitProducts: true
+            },
             orderBy: { visitTime: 'desc' },
         });
 
@@ -147,12 +177,16 @@ const exportVisitsCSV = async (req, res) => {
 
         const visits = await prisma.visit.findMany({
             where,
-            include: { user: { select: { name: true } }, customer: { select: { name: true } } },
+            include: {
+                user: { select: { name: true } },
+                customer: { select: { name: true } },
+                visitProducts: true
+            },
             orderBy: { visitTime: 'desc' },
         });
 
         // Manual CSV Generation
-        const headers = ['Date', 'Time', 'Employee', 'Customer', 'Purpose', 'Status', 'Latitude', 'Longitude', 'Notes'];
+        const headers = ['Date', 'Time', 'Employee', 'Customer', 'Purpose', 'Status', 'Latitude', 'Longitude', 'Notes', 'Prospect Status', 'Potential Value', 'Follow Up', 'Marketing Notes', 'Products'];
         const rows = visits.map(v => [
             new Date(v.visitTime).toLocaleDateString(),
             new Date(v.visitTime).toLocaleTimeString(),
@@ -162,7 +196,12 @@ const exportVisitsCSV = async (req, res) => {
             v.status,
             v.latitude,
             v.longitude,
-            `"${v.notes || ''}"`
+            `"${v.notes || ''}"`,
+            v.prospectStatus || '',
+            v.potentialValue || '',
+            v.followUpAt ? new Date(v.followUpAt).toLocaleDateString() : '',
+            `"${v.marketingNotes || ''}"`,
+            `"${v.visitProducts ? v.visitProducts.map(p => p.productName).join('; ') : ''}"`
         ]);
 
         const csvContent = [

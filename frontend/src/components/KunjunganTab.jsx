@@ -1,25 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, MapPin, Camera, AlertCircle, CheckCircle } from 'lucide-react';
+import { Briefcase, MapPin, AlertCircle, CheckCircle, CreditCard, User } from 'lucide-react';
 import api from '../utils/axiosConfig';
+
+const PRODUCT_OPTIONS = [
+    { code: 'TAB_UMUM', name: 'Tabungan Umum' },
+    { code: 'TAB_BERJANGKA', name: 'Tabungan Berjangka' },
+    { code: 'DEP_OS', name: 'Deposito' },
+    { code: 'KREDIT_MIKRO', name: 'Kredit Mikro' },
+    { code: 'KREDIT_KONSUMTIF', name: 'Kredit Konsumtif' },
+    { code: 'OTHER', name: 'Lainnya' }
+];
 
 const KunjunganTab = () => {
     const [showForm, setShowForm] = useState(false);
     const [customers, setCustomers] = useState([]);
+    const [billings, setBillings] = useState([]); // Active billings
     const [recentVisits, setRecentVisits] = useState([]);
     const [loading, setLoading] = useState(false);
     const [gpsLoading, setGpsLoading] = useState(false);
 
     const [formData, setFormData] = useState({
         customerId: '',
-        purpose: '',
+        customerName: '', // For manual input
+        purpose: 'SERVICE_ONLY',
         notes: '',
         latitude: null,
         longitude: null,
-        photoUrl: ''
+        photoUrl: '',
+        // Marketing Fields
+        marketingProducts: [], // Array of codes
+        prospectStatus: '', // NOT_INTERESTED, INTERESTED, IN_PROGRESS, REALIZED
+        potentialValue: '',
+        marketingNotes: '',
+        followUpAt: ''
     });
+
+    const [selectedBilling, setSelectedBilling] = useState(null);
 
     useEffect(() => {
         fetchCustomers();
+        fetchBillings();
         fetchRecentVisits();
     }, []);
 
@@ -29,6 +49,15 @@ const KunjunganTab = () => {
             setCustomers(res.data);
         } catch (err) {
             console.error('Failed to fetch customers:', err);
+        }
+    };
+
+    const fetchBillings = async () => {
+        try {
+            const res = await api.get('/billing');
+            setBillings(res.data);
+        } catch (err) {
+            console.error('Failed to fetch billings:', err);
         }
     };
 
@@ -66,15 +95,41 @@ const KunjunganTab = () => {
         }
     };
 
+    const handleProductToggle = (code) => {
+        const current = formData.marketingProducts;
+        if (current.includes(code)) {
+            setFormData({ ...formData, marketingProducts: current.filter(c => c !== code) });
+        } else {
+            setFormData({ ...formData, marketingProducts: [...current, code] });
+        }
+    };
+
+    const handleBillingSelect = (billingId) => {
+        const billing = billings.find(b => b.id === billingId);
+        if (billing) {
+            setSelectedBilling(billing);
+            setFormData({
+                ...formData,
+                customerId: billingId, // Using billing ID as reference if needed, or just name
+                customerName: billing.customerName,
+                notes: `Tagih Angsuran: Total Rp ${billing.total.toLocaleString('id-ID')}`
+            });
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         // Validation
-        if (!formData.customerId) {
-            alert('Pilih nasabah terlebih dahulu');
+        if (formData.purpose === 'TAGIH_ANGSURAN' && !selectedBilling) {
+            alert('Pilih nasabah yang akan ditagih');
             return;
         }
-        if (!formData.purpose.trim()) {
+        if (formData.purpose !== 'TAGIH_ANGSURAN' && !formData.customerName && !formData.customerId) {
+            alert('Nama nasabah wajib diisi/dipilih');
+            return;
+        }
+        if (!formData.purpose) {
             alert('Tujuan kunjungan wajib diisi');
             return;
         }
@@ -85,19 +140,90 @@ const KunjunganTab = () => {
 
         setLoading(true);
         try {
-            const response = await api.post('/visits', formData);
+            // Prepare payload
+            // Smart Customer ID Resolution
+            let finalCustomerId = formData.customerId;
+
+            // Strategy: 
+            // 1. If explicit customerId from Selection (Billing or Standard), use it.
+            // 2. If 'TAGIH_ANGSURAN', we have selectedBilling. Try to find real Customer by Name match.
+            // 3. If 'Manual Input', we have customerName. Try to find real Customer by Name match.
+            // 4. If no match, check for 'Umum'/'General' placeholder.
+            // 5. If still no match, Fail (Database Constraint Requies Customer ID).
+
+            if (formData.purpose === 'TAGIH_ANGSURAN') {
+                const match = customers.find(c => c.name.toLowerCase() === selectedBilling?.customerName.toLowerCase());
+                if (match) finalCustomerId = match.id;
+            } else if (!finalCustomerId && formData.customerName) {
+                // Try to find manually typed name
+                const match = customers.find(c => c.name.toLowerCase() === formData.customerName.toLowerCase());
+                if (match) finalCustomerId = match.id;
+            }
+
+            // Fallback for Unregistered/No Match
+            if (!finalCustomerId) {
+                const generic = customers.find(c => c.name.toLowerCase() === 'umum' || c.name.toLowerCase() === 'general');
+                if (generic) finalCustomerId = generic.id;
+                else {
+                    // Last resort: If user typed a name that doesn't exist, we can't create visit due to FK.
+                    // Alert user they must select existing or provide valid name.
+                    // Ideally we would auto-create customer here or use 'Guest'.
+                    alert('Gagal: Nasabah tidak ditemukan di database. Pastikan nama sesuai data nasabah terdaftar.');
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            const payload = {
+                customerId: finalCustomerId,
+                purpose: formData.purpose,
+                notes: formData.notes,
+                photoUrl: formData.photoUrl,
+                latitude: formData.latitude,
+                longitude: formData.longitude,
+            };
+
+            // Add Marketing Data if applicable
+            if (formData.purpose !== 'SERVICE_ONLY' && formData.purpose !== 'TAGIH_ANGSURAN') {
+                payload.prospectStatus = formData.prospectStatus;
+                payload.potentialValue = formData.potentialValue;
+                payload.marketingNotes = formData.marketingNotes;
+                payload.followUpAt = formData.followUpAt;
+
+                // Transform products
+                if (formData.marketingProducts.length > 0) {
+                    payload.products = formData.marketingProducts.map(code => {
+                        const prod = PRODUCT_OPTIONS.find(p => p.code === code);
+                        return {
+                            productCode: code,
+                            productName: prod?.name || code,
+                            prospectStatus: null,
+                            potentialValue: null
+                        };
+                    });
+                }
+            }
+
+            const response = await api.post('/visits', payload);
             alert('✅ Kunjungan berhasil disimpan!');
 
             // Reset form
             setFormData({
                 customerId: '',
-                purpose: '',
+                customerName: '',
+                purpose: 'SERVICE_ONLY',
                 notes: '',
                 latitude: null,
                 longitude: null,
-                photoUrl: ''
+                photoUrl: '',
+                marketingProducts: [],
+                prospectStatus: '',
+                potentialValue: '',
+                marketingNotes: '',
+                followUpAt: ''
             });
             setShowForm(false);
+            setSelectedBilling(null);
             fetchRecentVisits(); // Refresh the list
         } catch (err) {
             console.error('Submit error:', err);
@@ -111,6 +237,9 @@ const KunjunganTab = () => {
     const handleInputChange = (field, value) => {
         setFormData({ ...formData, [field]: value });
     };
+
+    const isMarketing = ['SERVICE_AND_OFFERING', 'OFFERING_ONLY'].includes(formData.purpose);
+    const isBilling = formData.purpose === 'TAGIH_ANGSURAN';
 
     return (
         <div className="pt-8">
@@ -151,13 +280,23 @@ const KunjunganTab = () => {
                                                 <p className="text-xs text-gray-500">{new Date(visit.visitTime).toLocaleDateString('id-ID')}</p>
                                             </div>
                                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${visit.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                                    visit.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                        'bg-yellow-100 text-yellow-700'
+                                                visit.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                    'bg-yellow-100 text-yellow-700'
                                                 }`}>
                                                 {visit.status}
                                             </span>
                                         </div>
-                                        <p className="text-xs text-gray-600">{visit.purpose}</p>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-semibold bg-gray-100 px-2 py-0.5 rounded text-gray-600">
+                                                {visit.purpose?.replace(/_/g, ' ')}
+                                            </span>
+                                            {visit.visitProducts && visit.visitProducts.length > 0 && (
+                                                <span className="text-xs text-blue-600 font-medium">
+                                                    {visit.visitProducts.length} Produk
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-gray-600 italic">"{visit.notes || '-'}"</p>
                                     </div>
                                 ))}
                             </div>
@@ -182,39 +321,185 @@ const KunjunganTab = () => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Customer Selection */}
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1">Pilih Nasabah *</label>
-                            <select
-                                value={formData.customerId}
-                                onChange={(e) => handleInputChange('customerId', e.target.value)}
-                                className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm"
-                                required
-                            >
-                                <option value="">-- Pilih Nasabah --</option>
-                                {customers.map((customer) => (
-                                    <option key={customer.id} value={customer.id}>
-                                        {customer.name} - {customer.address}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
 
                         {/* Purpose */}
                         <div>
                             <label className="block text-xs font-bold text-gray-700 mb-1">Tujuan Kunjungan *</label>
-                            <textarea
+                            <select
                                 value={formData.purpose}
-                                onChange={(e) => handleInputChange('purpose', e.target.value)}
-                                className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm h-24"
-                                placeholder="Contoh: Presentasi produk baru, follow up invoice, dll."
+                                onChange={(e) => {
+                                    handleInputChange('purpose', e.target.value);
+                                    setFormData(prev => ({ ...prev, purpose: e.target.value, customerId: '', customerName: '' }));
+                                    setSelectedBilling(null);
+                                }}
+                                className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm"
                                 required
-                            />
+                            >
+                                <option value="SERVICE_ONLY">Layanan Rutin (Service)</option>
+                                <option value="SERVICE_AND_OFFERING">Layanan & Penawaran Produk</option>
+                                <option value="OFFERING_ONLY">Penawaran Produk (Prospek Baru)</option>
+                                <option value="TAGIH_ANGSURAN">Tagih Angsuran Kredit</option>
+                            </select>
                         </div>
+
+                        {/* Customer Selection Logic */}
+                        {isBilling ? (
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Pilih Nasabah Tagihan *</label>
+                                <select
+                                    onChange={(e) => handleBillingSelect(e.target.value)}
+                                    className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm"
+                                    required
+                                >
+                                    <option value="">-- Pilih Tagihan Nasabah --</option>
+                                    {billings.map((bill) => (
+                                        <option key={bill.id} value={bill.id}>
+                                            {bill.customerName} - Rp {bill.total.toLocaleString()}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                {/* Billing Details Card */}
+                                {selectedBilling && (
+                                    <div className="mt-4 bg-red-50 p-4 rounded-xl border border-red-100">
+                                        <h4 className="font-bold text-red-800 text-sm mb-3 flex items-center gap-2">
+                                            <CreditCard size={16} />
+                                            Detail Tagihan
+                                        </h4>
+                                        <div className="space-y-2 text-sm text-gray-700">
+                                            <div className="flex justify-between">
+                                                <span>Pokok:</span>
+                                                <span className="font-semibold">Rp {selectedBilling.principal.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Bunga:</span>
+                                                <span className="font-semibold">Rp {selectedBilling.interest.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between text-red-600">
+                                                <span>Denda:</span>
+                                                <span className="font-semibold">Rp {selectedBilling.penalty.toLocaleString()}</span>
+                                            </div>
+                                            <div className="border-t border-red-200 pt-2 flex justify-between font-bold text-lg">
+                                                <span>Total:</span>
+                                                <span>Rp {selectedBilling.total.toLocaleString()}</span>
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-2 text-right">
+                                                Jatuh Tempo: {new Date(selectedBilling.dueDate).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Nama Nasabah / Calon Nasabah *</label>
+                                {/* Manual Input with Datalist suggestion */}
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        list="customer-list"
+                                        value={formData.customerName}
+                                        onChange={(e) => {
+                                            handleInputChange('customerName', e.target.value);
+                                            // Auto-select ID if exact match
+                                            const match = customers.find(c => c.name.toLowerCase() === e.target.value.toLowerCase());
+                                            if (match) handleInputChange('customerId', match.id);
+                                            else handleInputChange('customerId', '');
+                                        }}
+                                        className="w-full p-3 pl-10 rounded-xl border border-gray-200 bg-gray-50 text-sm"
+                                        placeholder="Ketik nama nasabah..."
+                                        required
+                                    />
+                                    <User className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                                    <datalist id="customer-list">
+                                        {customers.map((c) => (
+                                            <option key={c.id} value={c.name} />
+                                        ))}
+                                    </datalist>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-1 ml-1">Ketik manual atau pilih dari saran</p>
+                            </div>
+                        )}
+
+
+                        {/* Marketing Section */}
+                        {isMarketing && (
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-4">
+                                <h4 className="font-bold text-blue-800 text-sm flex items-center gap-2">
+                                    <Briefcase size={16} />
+                                    Detail Pemasaran & Prospek
+                                </h4>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-2">Produk Ditawarkan</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {PRODUCT_OPTIONS.map(prod => (
+                                            <button
+                                                key={prod.code}
+                                                type="button"
+                                                onClick={() => handleProductToggle(prod.code)}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${formData.marketingProducts.includes(prod.code)
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {prod.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Status Prospek</label>
+                                    <select
+                                        className="w-full p-3 rounded-xl border border-gray-200 bg-white text-sm"
+                                        value={formData.prospectStatus}
+                                        onChange={(e) => handleInputChange('prospectStatus', e.target.value)}
+                                    >
+                                        <option value="">-- Pilih Status --</option>
+                                        <option value="NOT_INTERESTED">Tidak Berminat</option>
+                                        <option value="INTERESTED">Berminat / Tertarik</option>
+                                        <option value="IN_PROGRESS">Sedang Proses / Negoisasi</option>
+                                        <option value="REALIZED">Closing / Realisasi</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Potensi Nilai (Rp)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full p-3 rounded-xl border border-gray-200 bg-white text-sm"
+                                        placeholder="Contoh: 5000000"
+                                        value={formData.potentialValue}
+                                        onChange={(e) => handleInputChange('potentialValue', e.target.value)}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Catatan Marketing</label>
+                                    <textarea
+                                        className="w-full p-3 rounded-xl border border-gray-200 bg-white text-sm h-20"
+                                        placeholder="Respon nasabah, keberatan, dll..."
+                                        value={formData.marketingNotes}
+                                        onChange={(e) => handleInputChange('marketingNotes', e.target.value)}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">Jadwal Follow Up</label>
+                                    <input
+                                        type="datetime-local"
+                                        className="w-full p-3 rounded-xl border border-gray-200 bg-white text-sm"
+                                        value={formData.followUpAt}
+                                        onChange={(e) => handleInputChange('followUpAt', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Notes (Optional) */}
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1">Catatan (Opsional)</label>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Catatan Umum (Opsional)</label>
                             <textarea
                                 value={formData.notes}
                                 onChange={(e) => handleInputChange('notes', e.target.value)}
@@ -263,8 +548,8 @@ const KunjunganTab = () => {
                             type="submit"
                             disabled={loading}
                             className={`w-full font-bold py-3 rounded-xl mt-4 shadow-lg transition ${loading
-                                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                    : 'bg-blue-600 text-white shadow-blue-600/30 hover:bg-blue-700'
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                : 'bg-blue-600 text-white shadow-blue-600/30 hover:bg-blue-700'
                                 }`}
                         >
                             {loading ? 'Menyimpan...' : 'Simpan Laporan'}

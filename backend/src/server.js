@@ -23,6 +23,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/billing', require('./routes/billingRoutes'));
 
 app.get('/', (req, res) => {
     res.send('AbsensiPintar API is running');

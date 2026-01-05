@@ -138,6 +138,102 @@ Aplikasi mobile untuk mencatat **absensi karyawan** dan **kunjungan nasabah berb
 - Laporan resmi & audit-ready
 
 ---
+Berikut draft PRD lengkap untuk **Modul Marketing & Prospek** yang bisa langsung kamu tambahkan ke dokumen sekarang.
+
+***
+
+## 6.x Modul Marketing & Prospek
+
+### 6.x.1 Tujuan Fitur  
+- Mencatat aktivitas penawaran produk BPR (tabungan, deposito, kredit, dll.) pada setiap kunjungan nasabah secara terstruktur dan terverifikasi GPS.[1][2]
+- Menyediakan data funnel marketing (penawaran → prospek → realisasi) per produk, per karyawan, dan per wilayah, sebagai dasar evaluasi dan pengambilan keputusan manajemen.[3][4]
+
+***
+
+### 6.x.2 Definisi & Istilah  
+- **Penawaran Produk**: Aktivitas marketing yang menjelaskan produk BPR kepada nasabah/prospek dalam satu kunjungan.[2][5]
+- **Prospek**: Nasabah atau calon nasabah yang menunjukkan ketertarikan terhadap produk dan layak untuk di-follow-up.[6][7]
+- **Realisasi**: Penawaran yang berujung pada pembukaan rekening/tabungan/deposito atau pencairan kredit (bisa manual dulu, integrasi ke core di fase lanjut).[8][3]
+
+***
+
+### 6.x.3 Perubahan di Form Kunjungan Nasabah  
+
+Form Kunjungan Nasabah ditambah field berikut (di atas atau bawah data nasabah):
+
+- **Tujuan Kunjungan** (wajib)  
+  - Tipe: Dropdown  
+  - Opsi:  
+    - Service / Penagihan / Monitoring  
+    - Service + Penawaran produk  
+    - Penawaran produk saja  
+- **Produk yang Ditawarkan** (opsional, wajib jika Tujuan = mengandung penawaran)  
+  - Tipe: Dropdown multi-produk  
+  - Contoh opsi: Tabungan Umum, Tabungan Berjangka, Deposito, Kredit Mikro, Kredit Konsumtif, Produk lain (free text).[9][2]
+- **Status Prospek** (opsional, wajib jika ada produk)  
+  - Tipe: Dropdown  
+  - Opsi:  
+    - Tidak tertarik  
+    - Tertarik (butuh follow-up)  
+    - Tertarik, sedang proses  
+    - Berhasil realisasi (manual flag)  
+- **Nilai Potensial** (opsional)  
+  - Tipe: Number  
+  - Deskripsi: estimasi nominal (saldo target / plafon kredit).  
+- **Catatan Marketing** (opsional)  
+  - Tipe: Textarea  
+  - Deskripsi: keberatan nasabah, kebutuhan khusus, atau info lain.  
+- **Jadwal Follow-up** (opsional)  
+  - Tipe: Date (jam opsional)  
+  - Deskripsi: rencana kunjungan ulang atau kontak lanjutan.
+
+Semua field ini tetap terikat pada:  
+- Absensi hari itu (wajib clock-in).[1]
+- Lokasi GPS + radius valid (≤ 100 m dari titik nasabah).[1]
+
+***
+
+### 6.x.4 Perubahan di Dashboard & Laporan  
+
+**Dashboard Supervisor / Admin**:  
+- Tambah widget **Funnel Marketing**:  
+  - Total kunjungan dengan penawaran produk.  
+  - Total prospek (Status Prospek ≠ “Tidak tertarik”).  
+  - Total realisasi (Status = “Berhasil realisasi”).[10][11]
+- Filter tambahan:  
+  - Produk yang ditawarkan.  
+  - Status prospek.  
+  - Nilai potensial (range).  
+- Tabel daftar kunjungan dilengkapi kolom: Tujuan Kunjungan, Produk, Status Prospek, Nilai Potensial.[1]
+
+**Export Laporan (CSV, kemudian PDF)**:  
+- Tambah kolom:  
+  - tujuan_kunjungan  
+  - produk_ditawarkan  
+  - status_prospek  
+  - nilai_potensial  
+  - jadwal_follow_up  
+- Laporan dapat difilter per periode, petugas, wilayah, dan produk.[3][1]
+
+***
+
+### 6.x.5 Flow & Approval  
+
+- Flow utama tetap: Login → Absen Masuk → Kunjungan → Validasi GPS → Status Pending → Approval → Absen Pulang.[1]
+- Pada saat Approval Kunjungan:  
+  - Supervisor/Admin dapat melihat detail marketing (produk, prospek, nilai potensial).  
+  - Dapat menolak kunjungan jika data marketing dianggap tidak wajar/tidak sesuai SOP (misal nilai potensial terlalu tinggi, atau produk tidak cocok dengan segmen).[11][1]
+
+***
+
+### 6.x.6 Non-Functional & Compliance (Tambahan)  
+
+- Data marketing (produk, prospek, nilai) ikut tercakup dalam audit trail dan tidak dapat diedit setelah approval, selaras dengan kebutuhan audit & ISO.[1]
+- Data ini dapat digunakan sebagai bahan review strategi cross selling BPR dan dokumentasi pemenuhan kewajiban informasi produk ke nasabah.[12][13]
+
+***
+
+
 
 ## 7. User Flow (High Level)
 

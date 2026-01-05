@@ -64,11 +64,42 @@ model Visit {
   longitude    Float
   photoUrl     String?
   status       String   @default("pending") // pending, approved, rejected
+  
+  // Marketing & Prospek Fields
+  // purpose is already defined above
+  prospectStatus   String? // NOT_INTERESTED, INTERESTED, IN_PROGRESS, REALIZED
+  potentialValue   Decimal?
+  marketingNotes   String?
+  followUpAt       DateTime?
 
   user       User       @relation(fields: [userId], references: [id])
   customer   Customer   @relation(fields: [customerId], references: [id])
   attendance Attendance? @relation(fields: [attendanceId], references: [id])
   approvals  Approval[]
+  visitProducts VisitProduct[]
+}
+
+model VisitProduct {
+  id             String   @id @default(uuid())
+  visitId        String
+  productCode    String
+  productName    String
+  prospectStatus String?
+  potentialValue Decimal?
+
+  visit Visit @relation(fields: [visitId], references: [id])
+}
+
+model Billing {
+  id           String   @id @default(uuid())
+  customerName String
+  principal    Float    // Pokok
+  interest     Float    // Bunga
+  penalty      Float    // Denda
+  total        Float
+  dueDate      DateTime
+  isPaid       Boolean  @default(false)
+  uploadedAt   DateTime @default(now())
 }
 
 model Approval {
