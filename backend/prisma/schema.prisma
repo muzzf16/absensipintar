@@ -28,9 +28,20 @@ model Attendance {
   checkIn        DateTime?
   checkOut       DateTime?
   
+  // Photo selfie URLs
+  checkInPhotoUrl   String?
+  checkOutPhotoUrl  String?
+  
+  // GPS Coordinates
+  checkInLatitude   Float?
+  checkInLongitude  Float?
+  checkOutLatitude  Float?
+  checkOutLongitude Float?
+  
   user User @relation(fields: [userId], references: [id])
   visits Visit[]
 }
+
 
 model Customer {
   id        String   @id @default(uuid())

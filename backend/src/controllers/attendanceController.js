@@ -2,12 +2,29 @@ const prisma = require('../utils/db');
 
 const checkIn = async (req, res) => {
     try {
+        console.log('=== CHECK-IN REQUEST START ===');
         const userId = req.user.userId;
+        const { photoUrl, latitude, longitude } = req.body;
         const now = new Date();
+
+        console.log('User ID:', userId);
+        console.log('Photo URL length:', photoUrl ? photoUrl.length : 0);
+        console.log('GPS:', latitude, longitude);
+
+        // Validation
+        if (!photoUrl) {
+            console.log('ERROR: No photo');
+            return res.status(400).json({ message: 'Foto selfie wajib untuk check-in' });
+        }
+        if (!latitude || !longitude) {
+            console.log('ERROR: No GPS');
+            return res.status(400).json({ message: 'Lokasi GPS wajib untuk check-in' });
+        }
 
         const startOfDay = new Date(now.setHours(0, 0, 0, 0));
         const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
+        console.log('Checking existing attendance...');
         const existingAttendance = await prisma.attendance.findFirst({
             where: {
                 userId,
@@ -19,27 +36,47 @@ const checkIn = async (req, res) => {
         });
 
         if (existingAttendance) {
+            console.log('ERROR: Already checked in');
             return res.status(400).json({ message: 'Already checked in today' });
         }
 
+        console.log('Creating attendance record...');
         const attendance = await prisma.attendance.create({
             data: {
                 userId,
                 checkIn: new Date(),
                 attendanceDate: new Date(),
+                checkInPhotoUrl: photoUrl,
+                checkInLatitude: parseFloat(latitude),
+                checkInLongitude: parseFloat(longitude),
             },
         });
 
+        console.log('SUCCESS: Attendance created:', attendance.id);
         res.status(201).json({ message: 'Check-in successful', attendance });
     } catch (error) {
+        console.error('=== CHECK-IN ERROR ===');
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         res.status(500).json({ message: 'Error checking in', error: error.message });
     }
 };
 
+
 const checkOut = async (req, res) => {
     try {
         const userId = req.user.userId;
+        const { photoUrl, latitude, longitude } = req.body;
         const now = new Date();
+
+        // Validation
+        if (!photoUrl) {
+            return res.status(400).json({ message: 'Foto selfie wajib untuk check-out' });
+        }
+        if (!latitude || !longitude) {
+            return res.status(400).json({ message: 'Lokasi GPS wajib untuk check-out' });
+        }
+
         const startOfDay = new Date(now.setHours(0, 0, 0, 0));
         const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
@@ -64,7 +101,12 @@ const checkOut = async (req, res) => {
 
         const updatedAttendance = await prisma.attendance.update({
             where: { id: attendance.id },
-            data: { checkOut: new Date() },
+            data: {
+                checkOut: new Date(),
+                checkOutPhotoUrl: photoUrl,
+                checkOutLatitude: parseFloat(latitude),
+                checkOutLongitude: parseFloat(longitude),
+            },
         });
 
         res.json({ message: 'Check-out successful', attendance: updatedAttendance });

@@ -82,6 +82,33 @@ const AdminVisitDashboard = () => {
         }
     };
 
+    const handleExportPDF = async () => {
+        try {
+            const params = {};
+            if (filters.startDate) params.startDate = filters.startDate;
+            if (filters.endDate) params.endDate = filters.endDate;
+            if (filters.userId) params.userId = filters.userId;
+            if (filters.customerId) params.customerId = filters.customerId;
+
+            const response = await api.get('/visits/export-pdf', {
+                params,
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'visits_report.pdf');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err) {
+            console.error("PDF Export failed", err);
+            alert('Gagal mengekspor PDF. Silakan coba lagi.');
+        }
+    };
+
+
     const handleApprove = async (id) => {
         if (!window.confirm('Approve this visit?')) return;
         try {
@@ -123,6 +150,13 @@ const AdminVisitDashboard = () => {
                     >
                         <Download size={16} />
                         Export CSV
+                    </button>
+                    <button
+                        onClick={handleExportPDF}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-bold hover:bg-red-100"
+                    >
+                        <Download size={16} />
+                        Export PDF
                     </button>
                 </div>
             </div>
@@ -207,8 +241,8 @@ const AdminVisitDashboard = () => {
                                 <td className="p-3">
                                     <div className="flex items-center gap-2">
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${item.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                                item.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                    'bg-yellow-100 text-yellow-700'
+                                            item.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                'bg-yellow-100 text-yellow-700'
                                             }`}>
                                             {item.status}
                                         </span>

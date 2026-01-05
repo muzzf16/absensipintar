@@ -1,11 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../utils/axiosConfig';
-import { MapPin } from 'lucide-react';
+import { MapPin, Camera, X, CheckCircle, Loader } from 'lucide-react';
 
 const AbsensiTab = ({ user }) => {
     const [status, setStatus] = useState('none');
-    const [stats, setStats] = useState({ checkIn: null, checkOut: null });
+    const [stats, setStats] = useState({
+        checkIn: null,
+        checkOut: null,
+        checkInPhoto: null,
+        checkOutPhoto: null,
+        checkInGPS: null,
+        checkOutGPS: null
+    });
     const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Camera states
+    const [showCamera, setShowCamera] = useState(false);
+    const [actionType, setActionType] = useState(null); // 'checkin' or 'checkout'
+    const [cameraStream, setCameraStream] = useState(null);
+    const [capturedPhoto, setCapturedPhoto] = useState(null);
+    const [gpsData, setGpsData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [gpsLoading, setGpsLoading] = useState(false);
+
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -16,14 +35,23 @@ const AbsensiTab = ({ user }) => {
     const fetchTodayStatus = async () => {
         try {
             const res = await api.get('/attendance/history');
-            // Simplified logic: finding today's record from history for demo
             const today = new Date().toDateString();
             const todayRecord = res.data.find(r => new Date(r.attendanceDate).toDateString() === today);
 
             if (todayRecord) {
                 setStats({
                     checkIn: todayRecord.checkIn,
-                    checkOut: todayRecord.checkOut
+                    checkOut: todayRecord.checkOut,
+                    checkInPhoto: todayRecord.checkInPhotoUrl,
+                    checkOutPhoto: todayRecord.checkOutPhotoUrl,
+                    checkInGPS: todayRecord.checkInLatitude ? {
+                        lat: todayRecord.checkInLatitude,
+                        lng: todayRecord.checkInLongitude
+                    } : null,
+                    checkOutGPS: todayRecord.checkOutLatitude ? {
+                        lat: todayRecord.checkOutLatitude,
+                        lng: todayRecord.checkOutLongitude
+                    } : null
                 });
                 if (todayRecord.checkOut) setStatus('completed');
                 else if (todayRecord.checkIn) setStatus('checked-in');
@@ -33,24 +61,172 @@ const AbsensiTab = ({ user }) => {
         }
     };
 
-    const handleAction = async () => {
-        // Simple location mock
-        const location = { latitude: -6.2088, longitude: 106.8456 }; // Jakarta
+    const handleActionClick = async (type) => {
+        setActionType(type);
+        setShowCamera(true);
+        setCapturedPhoto(null);
+        setGpsData(null);
+
+        // Auto-capture GPS
+        captureGPS();
+
+        // Start camera
         try {
-            if (status === 'none') {
-                await api.post('/attendance/checkin', location);
-            } else if (status === 'checked-in') {
-                await api.post('/attendance/checkout', location);
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user' },
+                audio: false
+            });
+            setCameraStream(stream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
             }
-            fetchTodayStatus();
         } catch (err) {
-            alert('Action failed: ' + (err.response?.data?.message || err.message));
+            alert('Gagal mengakses kamera. Pastikan izin kamera diberikan.');
+            setShowCamera(false);
         }
     };
+
+    const captureGPS = () => {
+        setGpsLoading(true);
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setGpsData({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    });
+                    setGpsLoading(false);
+                },
+                (error) => {
+                    setGpsLoading(false);
+                    alert('Gagal mendapatkan lokasi GPS. Pastikan GPS aktif.');
+                }
+            );
+        } else {
+            setGpsLoading(false);
+            alert('Browser tidak mendukung GPS');
+        }
+    };
+
+    const takePhoto = () => {
+        if (!videoRef.current) return;
+
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
+
+        // Reduce resolution untuk minimize file size
+        const maxWidth = 800;
+        const maxHeight = 1000;
+
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+
+        if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+        }
+        if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, width, height);
+
+        // Lower quality untuk reduce file size (50%)
+        const photoDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+        console.log('Photo captured, size:', photoDataUrl.length, 'bytes');
+        setCapturedPhoto(photoDataUrl);
+
+        // Stop camera stream
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+        }
+    };
+
+    const retakePhoto = async () => {
+        setCapturedPhoto(null);
+
+        // Restart camera
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user' },
+                audio: false
+            });
+            setCameraStream(stream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (err) {
+            alert('Gagal mengakses kamera');
+        }
+    };
+
+    const closeCamera = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+        }
+        setShowCamera(false);
+        setCapturedPhoto(null);
+        setGpsData(null);
+        setActionType(null);
+    };
+
+    const submitAttendance = async () => {
+        if (!capturedPhoto) {
+            alert('Ambil foto selfie terlebih dahulu');
+            return;
+        }
+        if (!gpsData) {
+            alert('Menunggu GPS... Harap tunggu beberapa detik');
+            return;
+        }
+
+        console.log('=== SUBMIT ATTENDANCE START ===');
+        console.log('Action type:', actionType);
+        console.log('Photo size:', capturedPhoto.length, 'bytes');
+        console.log('GPS:', gpsData);
+
+        setLoading(true);
+        try {
+            const endpoint = actionType === 'checkin' ? '/attendance/checkin' : '/attendance/checkout';
+            console.log('Calling endpoint:', endpoint);
+
+            const response = await api.post(endpoint, {
+                photoUrl: capturedPhoto,
+                latitude: gpsData.latitude,
+                longitude: gpsData.longitude
+            });
+
+            console.log('Response:', response.data);
+            alert(`✅ ${actionType === 'checkin' ? 'Check-in' : 'Check-out'} berhasil!`);
+            closeCamera();
+            fetchTodayStatus();
+        } catch (err) {
+            console.error('=== SUBMIT ERROR ===');
+            console.error('Error:', err);
+            console.error('Response data:', err.response?.data);
+            console.error('Response status:', err.response?.status);
+
+            const errorMsg = err.response?.data?.message || err.message || 'Unknown error';
+            alert('❌ ' + errorMsg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     const formatTime = (isoString) => {
         if (!isoString) return '--:--';
         return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const formatGPS = (gps) => {
+        if (!gps) return 'GPS tidak tersedia';
+        return `${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)}`;
     };
 
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -67,33 +243,161 @@ const AbsensiTab = ({ user }) => {
             <div className="relative mb-10">
                 <div className="absolute inset-0 bg-blue-50 rounded-full blur-xl opacity-50"></div>
                 <button
-                    onClick={handleAction}
+                    onClick={() => {
+                        if (status === 'none') handleActionClick('checkin');
+                        else if (status === 'checked-in') handleActionClick('checkout');
+                    }}
                     disabled={status === 'completed'}
                     className={`w-48 h-48 rounded-full border-4 flex flex-col items-center justify-center shadow-sm relative z-10 transition-all active:scale-95
-                        ${status === 'completed' ? 'border-gray-100 bg-gray-50 text-gray-400' :
-                            status === 'checked-in' ? 'border-red-100 bg-white text-red-500' :
-                                'border-blue-100 bg-white text-blue-500'}`}
+                        ${status === 'completed' ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed' :
+                            status === 'checked-in' ? 'border-red-100 bg-white text-red-500 hover:bg-red-50' :
+                                'border-blue-100 bg-white text-blue-500 hover:bg-blue-50'}`}
                 >
-                    <div className={`text-xs uppercase font-bold tracking-widest mb-1 
+                    <Camera size={48} className="mb-2" />
+                    <div className={`text-xs uppercase font-bold tracking-widest 
                         ${status === 'completed' ? 'text-gray-400' :
                             status === 'checked-in' ? 'text-red-400' : 'text-blue-400'}`}>
                         {status === 'completed' ? 'Selesai' : status === 'checked-in' ? 'Check Out' : 'Check In'}
                     </div>
                 </button>
-                {/* Decorative Dashed Circle */}
                 <div className="absolute top-[-10px] left-[-10px] right-[-10px] bottom-[-10px] border-2 border-dashed border-gray-200 rounded-full pointer-events-none"></div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 w-full">
-                <div className="bg-white border boundary-gray-100 p-4 rounded-2xl text-center shadow-sm">
+            {/* Status Cards */}
+            <div className="grid grid-cols-2 gap-4 w-full mb-6">
+                <div className="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm">
                     <p className="text-xs text-gray-400 font-medium mb-1">Jam Masuk</p>
                     <p className="text-xl font-bold text-gray-800">{formatTime(stats.checkIn)}</p>
+                    {stats.checkInGPS && (
+                        <p className="text-xs text-gray-400 mt-1 flex items-center justify-center gap-1">
+                            <MapPin size={10} />
+                            GPS OK
+                        </p>
+                    )}
                 </div>
-                <div className="bg-white border boundary-gray-100 p-4 rounded-2xl text-center shadow-sm">
+                <div className="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm">
                     <p className="text-xs text-gray-400 font-medium mb-1">Jam Pulang</p>
                     <p className="text-xl font-bold text-gray-800">{formatTime(stats.checkOut)}</p>
+                    {stats.checkOutGPS && (
+                        <p className="text-xs text-gray-400 mt-1 flex items-center justify-center gap-1">
+                            <MapPin size={10} />
+                            GPS OK
+                        </p>
+                    )}
                 </div>
             </div>
+
+            {/* Photo Preview */}
+            {(stats.checkInPhoto || stats.checkOutPhoto) && (
+                <div className="w-full bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <p className="text-xs font-bold text-gray-600 mb-3">Foto Absensi Hari Ini</p>
+                    <div className="grid grid-cols-2 gap-3">
+                        {stats.checkInPhoto && (
+                            <div>
+                                <p className="text-xs text-gray-400 mb-1">Check In</p>
+                                <img src={stats.checkInPhoto} alt="Check-in" className="w-full rounded-lg border border-gray-200" />
+                                {stats.checkInGPS && (
+                                    <p className="text-xs text-gray-400 mt-1 truncate">{formatGPS(stats.checkInGPS)}</p>
+                                )}
+                            </div>
+                        )}
+                        {stats.checkOutPhoto && (
+                            <div>
+                                <p className="text-xs text-gray-400 mb-1">Check Out</p>
+                                <img src={stats.checkOutPhoto} alt="Check-out" className="w-full rounded-lg border border-gray-200" />
+                                {stats.checkOutGPS && (
+                                    <p className="text-xs text-gray-400 mt-1 truncate">{formatGPS(stats.checkOutGPS)}</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Camera Modal */}
+            {showCamera && (
+                <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg">
+                                {actionType === 'checkin' ? 'Check In' : 'Check Out'} - Ambil Foto Selfie
+                            </h3>
+                            <button onClick={closeCamera} className="p-2 hover:bg-gray-100 rounded-full">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Camera/Photo Preview */}
+                        <div className="relative bg-gray-900 rounded-xl overflow-hidden mb-4" style={{ aspectRatio: '3/4' }}>
+                            {!capturedPhoto ? (
+                                <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <img src={capturedPhoto} alt="Captured" className="w-full h-full object-cover" />
+                            )}
+                        </div>
+
+                        {/* GPS Status */}
+                        <div className={`p-3 rounded-lg mb-4 flex items-center gap-2 ${gpsData ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                            }`}>
+                            {gpsLoading ? (
+                                <>
+                                    <Loader size={16} className="animate-spin" />
+                                    <span className="text-xs">Menangkap GPS...</span>
+                                </>
+                            ) : gpsData ? (
+                                <>
+                                    <CheckCircle size={16} />
+                                    <span className="text-xs">GPS: {gpsData.latitude.toFixed(6)}, {gpsData.longitude.toFixed(6)}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <MapPin size={16} />
+                                    <span className="text-xs">Menunggu GPS...</span>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3">
+                            {!capturedPhoto ? (
+                                <button
+                                    onClick={takePhoto}
+                                    className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition"
+                                >
+                                    📸 Ambil Foto
+                                </button>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={retakePhoto}
+                                        className="flex-1 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-300 transition"
+                                    >
+                                        🔄 Ambil Ulang
+                                    </button>
+                                    <button
+                                        onClick={submitAttendance}
+                                        disabled={loading || !gpsData}
+                                        className={`flex-1 font-bold py-3 rounded-xl transition ${loading || !gpsData
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-green-600 text-white hover:bg-green-700'
+                                            }`}
+                                    >
+                                        {loading ? 'Menyimpan...' : '✓ Submit'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Hidden canvas for photo capture */}
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
     );
 };

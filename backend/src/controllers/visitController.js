@@ -1,5 +1,7 @@
 const prisma = require('../utils/db');
 const { getDistanceFromLatLonInMeters } = require('../utils/geoUtils');
+const { generateVisitsPDF } = require('../utils/pdfGenerator');
+
 
 const createVisit = async (req, res) => {
     try {
@@ -203,4 +205,43 @@ const approveVisit = async (req, res) => {
     }
 };
 
-module.exports = { createVisit, getVisits, approveVisit, exportVisitsCSV };
+const exportVisitsPDF = async (req, res) => {
+    try {
+        const { startDate, endDate, customerId, userId: filterUserId } = req.query;
+        let where = {};
+
+        // Reuse filter logic
+        if (filterUserId) where.userId = filterUserId;
+        if (customerId) where.customerId = customerId;
+        if (startDate && endDate) {
+            where.visitTime = {
+                gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+                lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+            };
+        }
+
+        const visits = await prisma.visit.findMany({
+            where,
+            include: { user: { select: { name: true } }, customer: { select: { name: true } } },
+            orderBy: { visitTime: 'desc' },
+        });
+
+        // Generate PDF
+        const doc = generateVisitsPDF(visits, { startDate, endDate, userId: filterUserId, customerId });
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=visits_report.pdf');
+
+        // Pipe the PDF to response
+        doc.pipe(res);
+        doc.end();
+
+    } catch (error) {
+        console.error('PDF Export Error:', error);
+        res.status(500).json({ message: 'Error exporting PDF', error: error.message });
+    }
+};
+
+module.exports = { createVisit, getVisits, approveVisit, exportVisitsCSV, exportVisitsPDF };
+
