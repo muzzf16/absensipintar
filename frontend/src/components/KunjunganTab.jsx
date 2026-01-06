@@ -140,42 +140,10 @@ const KunjunganTab = () => {
 
         setLoading(true);
         try {
-            // Prepare payload
-            // Smart Customer ID Resolution
-            let finalCustomerId = formData.customerId;
-
-            // Strategy: 
-            // 1. If explicit customerId from Selection (Billing or Standard), use it.
-            // 2. If 'TAGIH_ANGSURAN', we have selectedBilling. Try to find real Customer by Name match.
-            // 3. If 'Manual Input', we have customerName. Try to find real Customer by Name match.
-            // 4. If no match, check for 'Umum'/'General' placeholder.
-            // 5. If still no match, Fail (Database Constraint Requies Customer ID).
-
-            if (formData.purpose === 'TAGIH_ANGSURAN') {
-                const match = customers.find(c => c.name.toLowerCase() === selectedBilling?.customerName.toLowerCase());
-                if (match) finalCustomerId = match.id;
-            } else if (!finalCustomerId && formData.customerName) {
-                // Try to find manually typed name
-                const match = customers.find(c => c.name.toLowerCase() === formData.customerName.toLowerCase());
-                if (match) finalCustomerId = match.id;
-            }
-
-            // Fallback for Unregistered/No Match
-            if (!finalCustomerId) {
-                const generic = customers.find(c => c.name.toLowerCase() === 'umum' || c.name.toLowerCase() === 'general');
-                if (generic) finalCustomerId = generic.id;
-                else {
-                    // Last resort: If user typed a name that doesn't exist, we can't create visit due to FK.
-                    // Alert user they must select existing or provide valid name.
-                    // Ideally we would auto-create customer here or use 'Guest'.
-                    alert('Gagal: Nasabah tidak ditemukan di database. Pastikan nama sesuai data nasabah terdaftar.');
-                    setLoading(false);
-                    return;
-                }
-            }
-
+            // Prepare payload - backend will handle customer creation if needed
             const payload = {
-                customerId: finalCustomerId,
+                customerId: formData.customerId || null,
+                customerName: formData.customerName || selectedBilling?.customerName || null,
                 purpose: formData.purpose,
                 notes: formData.notes,
                 photoUrl: formData.photoUrl,
@@ -400,14 +368,17 @@ const KunjunganTab = () => {
                                         list="customer-list"
                                         value={formData.customerName}
                                         onChange={(e) => {
-                                            handleInputChange('customerName', e.target.value);
-                                            // Auto-select ID if exact match
-                                            const match = customers.find(c => c.name.toLowerCase() === e.target.value.toLowerCase());
-                                            if (match) handleInputChange('customerId', match.id);
-                                            else handleInputChange('customerId', '');
+                                            const inputName = e.target.value;
+                                            const match = customers.find(c => c.name.toLowerCase() === inputName.toLowerCase());
+                                            setFormData({
+                                                ...formData,
+                                                customerName: inputName,
+                                                customerId: match ? match.id : ''
+                                            });
                                         }}
-                                        className="w-full p-3 pl-10 rounded-xl border border-gray-200 bg-gray-50 text-sm"
+                                        className="w-full p-3 pl-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800"
                                         placeholder="Ketik nama nasabah..."
+                                        autoComplete="off"
                                         required
                                     />
                                     <User className="absolute left-3 top-3.5 text-gray-400" size={18} />

@@ -18,9 +18,11 @@ const Visits = () => {
     const [attendanceStatus, setAttendanceStatus] = useState(null); // 'checked-in', 'checked-out', 'none'
     const [loading, setLoading] = useState(true);
 
+
     // Form State
     const [formData, setFormData] = useState({
         customerId: '',
+        customerName: '', // For manual input
         purpose: 'SERVICE_ONLY',
         notes: '',
         photoUrl: '',
@@ -106,11 +108,13 @@ const Visits = () => {
             return;
         }
 
+
         setSubmitting(true);
         try {
-            // Prepare payload
+            // Prepare payload - backend will handle customer creation if needed
             const payload = {
-                customerId: formData.customerId,
+                customerId: formData.customerId || null,
+                customerName: formData.customerName || null,
                 purpose: formData.purpose,
                 notes: formData.notes,
                 photoUrl: formData.photoUrl,
@@ -118,8 +122,8 @@ const Visits = () => {
                 longitude: location.longitude,
             };
 
-            // Add Marketing Data if applicable
-            if (formData.purpose !== 'SERVICE_ONLY') {
+            // Add Marketing Data if applicable (only for marketing purposes)
+            if (['SERVICE_AND_OFFERING', 'OFFERING_ONLY'].includes(formData.purpose)) {
                 payload.prospectStatus = formData.prospectStatus;
                 payload.potentialValue = formData.potentialValue;
                 payload.marketingNotes = formData.marketingNotes;
@@ -145,6 +149,7 @@ const Visits = () => {
             // Reset Form
             setFormData({
                 customerId: '',
+                customerName: '',
                 purpose: 'SERVICE_ONLY',
                 notes: '',
                 photoUrl: '',
@@ -165,7 +170,7 @@ const Visits = () => {
 
     if (loading) return <div className="p-4">Loading...</div>;
 
-    const isMarketing = formData.purpose !== 'SERVICE_ONLY';
+    const isMarketing = ['SERVICE_AND_OFFERING', 'OFFERING_ONLY'].includes(formData.purpose);
 
     return (
         <div className="p-4 relative min-h-full pb-20">
@@ -245,18 +250,31 @@ const Visits = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                            <select
-                                className="w-full border rounded-lg p-2 bg-gray-50"
-                                value={formData.customerId}
-                                onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name / Calon Nasabah</label>
+                            <input
+                                type="text"
+                                list="customer-list"
+                                value={formData.customerName}
+                                onChange={(e) => {
+                                    const inputName = e.target.value;
+                                    const match = customers.find(c => c.name.toLowerCase() === inputName.toLowerCase());
+                                    setFormData({
+                                        ...formData,
+                                        customerName: inputName,
+                                        customerId: match ? match.id : ''
+                                    });
+                                }}
+                                className="w-full border rounded-lg p-2 bg-white text-gray-800"
+                                placeholder="Type customer name..."
+                                autoComplete="off"
                                 required
-                            >
-                                <option value="">Select Customer...</option>
-                                {customers.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
+                            />
+                            <datalist id="customer-list">
+                                {customers.map((c) => (
+                                    <option key={c.id} value={c.name} />
                                 ))}
-                            </select>
+                            </datalist>
+                            <p className="text-xs text-gray-400 mt-1">Type manually or select from suggestions</p>
                         </div>
 
                         <div>
@@ -270,6 +288,7 @@ const Visits = () => {
                                 <option value="SERVICE_ONLY">Service Only</option>
                                 <option value="SERVICE_AND_OFFERING">Service & Offering</option>
                                 <option value="OFFERING_ONLY">Offering Only</option>
+                                <option value="TAGIH_ANGSURAN">Tagih Angsuran Kredit</option>
                             </select>
                         </div>
 
@@ -287,8 +306,8 @@ const Visits = () => {
                                                 type="button"
                                                 onClick={() => handleProductToggle(prod.code)}
                                                 className={`px-3 py-1 rounded-full text-xs font-medium border ${formData.marketingProducts.includes(prod.code)
-                                                        ? 'bg-blue-600 text-white border-blue-600'
-                                                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 {prod.name}

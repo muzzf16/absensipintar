@@ -114,7 +114,7 @@ const Login = () => {
                 </div>
 
                 <p className="text-center text-gray-400 text-xs mt-8">
-                    © 2026 PT. Absensi Pintar Indonesia
+                    © 2026 PT. BPR BAPERA BATANG
                 </p>
             </div>
         </div>

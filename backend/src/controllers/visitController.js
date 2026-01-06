@@ -5,12 +5,14 @@ const { generateVisitsPDF } = require('../utils/pdfGenerator');
 
 const createVisit = async (req, res) => {
     try {
-        console.log("---------------- CREATE VISIT START ----------------");
-        console.log("Body:", req.body);
+        console.log("================== CREATE VISIT START ==================");
+        console.log("Request Body:", JSON.stringify(req.body, null, 2));
         console.log("User:", req.user);
 
+
+        // 1. Get or Create Customer
         const {
-            customerId, purpose, notes, latitude, longitude, photoUrl,
+            customerId, customerName, purpose, notes, latitude, longitude, photoUrl,
             // New Marketing Fields
             prospectStatus, potentialValue, marketingNotes, followUpAt,
             products // Array of { productCode, productName, prospectStatus, potentialValue }
@@ -18,7 +20,7 @@ const createVisit = async (req, res) => {
         const userId = req.user.userId;
 
         if (!latitude || !longitude) {
-            console.log("Error: Missing GPS");
+            console.log("ERROR: Missing GPS coordinates");
             return res.status(400).json({ message: 'GPS Location is required.' });
         }
 
@@ -44,14 +46,58 @@ const createVisit = async (req, res) => {
             return res.status(403).json({ message: 'You must Clock In (Absen Masuk) first before creating a visit.' });
         }
 
-        // 1. Get Customer Location
-        const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-        console.log("Customer Record:", customer);
+        // 1. Get or Auto-Create Customer
+        let customer;
+        let finalCustomerId = null;
+
+        console.log("Customer lookup - ID:", customerId, "Name:", customerName);
+
+        // First priority: Try to find by name if provided
+        if (customerName && customerName.trim() !== '') {
+            console.log(`Looking for customer by name: "${customerName}"`);
+            const customers = await prisma.customer.findMany();
+            console.log(`Total customers in DB: ${customers.length}`);
+            customer = customers.find(c => c.name.toLowerCase() === customerName.trim().toLowerCase());
+
+            if (customer) {
+                console.log("Found existing customer by name:", customer.name);
+                finalCustomerId = customer.id;
+            } else {
+                // AUTO-CREATE as prospect
+                console.log(`Auto-creating prospect customer: ${customerName}`);
+                try {
+                    customer = await prisma.customer.create({
+                        data: {
+                            name: customerName.trim(),
+                            address: `[PROSPEK] Alamat belum lengkap`,
+                            latitude: parseFloat(latitude),
+                            longitude: parseFloat(longitude)
+                        }
+                    });
+                    console.log("Created prospect customer:", customer);
+                    finalCustomerId = customer.id;
+                } catch (createError) {
+                    console.error("Error creating customer:", createError);
+                    throw createError;
+                }
+            }
+        }
+        // Fallback: Try to find by ID only if name not provided and ID is valid
+        else if (customerId && customerId !== 'null' && customerId !== '' && customerId !== null) {
+            console.log(`Looking for customer by ID: ${customerId}`);
+            customer = await prisma.customer.findUnique({ where: { id: customerId } });
+            if (customer) {
+                console.log("Found customer by ID:", customer.name);
+                finalCustomerId = customer.id;
+            }
+        }
 
         if (!customer) {
-            console.log("Error: Customer not found");
-            return res.status(404).json({ message: 'Customer not found.' });
+            console.log("Error: Customer not found and no name provided");
+            return res.status(404).json({ message: 'Customer not found. Please provide customer ID or name.' });
         }
+
+        console.log("Customer Record:", customer);
 
         // 2. Calculate Distance
         const distanceInfo = getDistanceFromLatLonInMeters(
@@ -61,9 +107,12 @@ const createVisit = async (req, res) => {
 
         console.log(`Calculate Distance: User(${latitude}, ${longitude}) vs Customer(${customer.latitude}, ${customer.longitude}) = ${distanceInfo} meters`);
 
-        // 3. Validate Radius (e.g., 100 meters)
-        const MAX_RADIUS = 100;
-        if (distanceInfo > MAX_RADIUS) {
+        // 3. Validate Radius (configurable via env, default 500m)
+        // Skip radius check for auto-created prospects (distance will be 0 on first visit)
+        const MAX_RADIUS = parseInt(process.env.VISIT_RADIUS_METERS) || 500;
+        const isProspect = customer.address.startsWith('[PROSPEK]');
+
+        if (!isProspect && distanceInfo > MAX_RADIUS) {
             console.log("Error: Out of Radius");
             return res.status(400).json({
                 message: `Out of range! You are ${Math.round(distanceInfo)}m away from customer. Max allowed is ${MAX_RADIUS}m.`
@@ -73,7 +122,7 @@ const createVisit = async (req, res) => {
         // Prepare Visit Data
         const visitData = {
             userId,
-            customerId,
+            customerId: finalCustomerId,
             attendanceId: attendance.id,
             purpose,
             notes,
