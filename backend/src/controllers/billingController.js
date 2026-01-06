@@ -12,19 +12,43 @@ const uploadBilling = async (req, res) => {
         const results = [];
         fs.createReadStream(req.file.path)
             .pipe(csv())
-            .on('data', (data) => results.push(data))
+            .on('data', (data) => {
+                console.log("CSV Row:", data);
+                results.push(data);
+            })
             .on('end', async () => {
                 try {
+                    if (results.length === 0) {
+                        return res.status(400).json({ message: 'File CSV kosong atau format salah' });
+                    }
+
                     // Transaction to ensure atomicity
-                    const createPromises = results.map(row => {
+                    const createPromises = results.map((row, index) => {
+                        console.log(`Processing row ${index}:`, row);
+
+                        // Handle potential BOM in column names
+                        const customerName = row.customerName || row['﻿customerName'] || row[Object.keys(row)[0]];
+                        const principal = parseFloat(row.principal) || 0;
+                        const interest = parseFloat(row.interest) || 0;
+                        const penalty = parseFloat(row.penalty) || 0;
+                        const total = parseFloat(row.total) || 0;
+                        const dueDate = new Date(row.dueDate);
+
+                        if (!customerName) {
+                            throw new Error(`Row ${index + 1}: customerName tidak boleh kosong`);
+                        }
+                        if (isNaN(dueDate.getTime())) {
+                            throw new Error(`Row ${index + 1}: dueDate format salah (gunakan YYYY-MM-DD)`);
+                        }
+
                         return prisma.billing.create({
                             data: {
-                                customerName: row.customerName,
-                                principal: parseFloat(row.principal) || 0,
-                                interest: parseFloat(row.interest) || 0,
-                                penalty: parseFloat(row.penalty) || 0,
-                                total: parseFloat(row.total) || 0,
-                                dueDate: new Date(row.dueDate),
+                                customerName,
+                                principal,
+                                interest,
+                                penalty,
+                                total,
+                                dueDate,
                                 isPaid: false
                             }
                         });

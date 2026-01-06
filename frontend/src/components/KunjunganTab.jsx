@@ -193,10 +193,9 @@ const KunjunganTab = () => {
             setShowForm(false);
             setSelectedBilling(null);
             fetchRecentVisits(); // Refresh the list
-        } catch (err) {
-            console.error('Submit error:', err);
-            const errorMsg = err.response?.data?.message || 'Gagal menyimpan kunjungan';
-            alert(`❌ ${errorMsg}`);
+        } catch (error) {
+            console.error("Submit error:", error);
+            alert(`Gagal: ${error.response?.data?.message || error.message}`);
         } finally {
             setLoading(false);
         }

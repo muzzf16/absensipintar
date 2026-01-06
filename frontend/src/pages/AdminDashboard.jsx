@@ -47,6 +47,28 @@ const AdminDashboard = ({ user }) => {
         navigate('/login');
     };
 
+    const handleExportAttendance = async () => {
+        try {
+            const response = await api.get('/attendance/export-csv', {
+                responseType: 'blob'
+            });
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `attendance_report_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+
+            alert('Data absensi berhasil di-export!');
+        } catch (error) {
+            console.error('Export error:', error);
+            alert('Gagal export data: ' + (error.response?.data?.message || error.message));
+        }
+    };
+
     return (
         <div className="min-h-screen bg-white pb-20">
             {/* Header */}
@@ -173,7 +195,7 @@ const AdminDashboard = ({ user }) => {
                                         <h3 className="font-bold text-gray-800 text-sm">Laporan Kehadiran</h3>
                                         <p className="text-[10px] text-gray-400">Daftar aktivitas absensi.</p>
                                     </div>
-                                    <button className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 hover:bg-gray-50">
+                                    <button onClick={handleExportAttendance} className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 hover:bg-gray-50">
                                         <Download size={12} />
                                         Export
                                     </button>

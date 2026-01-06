@@ -104,7 +104,7 @@ const Visits = () => {
         e.preventDefault();
         setSubmitError('');
         if (!location) {
-            setSubmitError('GPS Location is required!');
+            setSubmitError('Lokasi GPS diperlukan!');
             return;
         }
 

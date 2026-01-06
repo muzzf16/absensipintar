@@ -188,4 +188,43 @@ const getStats = async (req, res) => {
     }
 };
 
-module.exports = { checkIn, checkOut, getHistory, getAllAttendance, getStats };
+const exportCSV = async (req, res) => {
+    try {
+        const attendances = await prisma.attendance.findMany({
+            include: { user: { select: { name: true } } },
+            orderBy: { attendanceDate: 'desc' }
+        });
+
+        // CSV Headers
+        const headers = ['Tanggal', 'Nama', 'Check In', 'Check Out', 'Latitude In', 'Longitude In', 'Latitude Out', 'Longitude Out'];
+
+        // CSV Rows
+        const rows = attendances.map(a => [
+            new Date(a.attendanceDate).toLocaleDateString('id-ID'),
+            a.user?.name || 'Unknown',
+            a.checkIn ? new Date(a.checkIn).toLocaleTimeString('id-ID') : '-',
+            a.checkOut ? new Date(a.checkOut).toLocaleTimeString('id-ID') : '-',
+            a.checkInLatitude || '-',
+            a.checkInLongitude || '-',
+            a.checkOutLatitude || '-',
+            a.checkOutLongitude || '-'
+        ]);
+
+        // Generate CSV content
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+
+        // Set response headers for CSV download
+        res.header('Content-Type', 'text/csv; charset=utf-8');
+        res.header('Content-Disposition', 'attachment; filename=attendance_report.csv');
+        res.send('\uFEFF' + csvContent); // UTF-8 BOM for Excel compatibility
+
+    } catch (error) {
+        console.error('Export CSV error:', error);
+        res.status(500).json({ message: 'Gagal export data', error: error.message });
+    }
+};
+
+module.exports = { checkIn, checkOut, getHistory, getAllAttendance, getStats, exportCSV };

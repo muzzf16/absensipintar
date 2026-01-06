@@ -21,7 +21,7 @@ const createVisit = async (req, res) => {
 
         if (!latitude || !longitude) {
             console.log("ERROR: Missing GPS coordinates");
-            return res.status(400).json({ message: 'GPS Location is required.' });
+            return res.status(400).json({ message: 'Lokasi GPS diperlukan.' });
         }
 
         // 0. Check for Attendance (Clock In)
@@ -43,7 +43,7 @@ const createVisit = async (req, res) => {
 
         if (!attendance || !attendance.checkIn) {
             console.log("Error: Not Checked In");
-            return res.status(403).json({ message: 'You must Clock In (Absen Masuk) first before creating a visit.' });
+            return res.status(403).json({ message: 'Anda harus Absen Masuk terlebih dahulu sebelum membuat kunjungan.' });
         }
 
         // 1. Get or Auto-Create Customer
@@ -94,7 +94,7 @@ const createVisit = async (req, res) => {
 
         if (!customer) {
             console.log("Error: Customer not found and no name provided");
-            return res.status(404).json({ message: 'Customer not found. Please provide customer ID or name.' });
+            return res.status(404).json({ message: 'Nasabah tidak ditemukan. Mohon berikan ID atau nama nasabah.' });
         }
 
         console.log("Customer Record:", customer);
@@ -115,7 +115,7 @@ const createVisit = async (req, res) => {
         if (!isProspect && distanceInfo > MAX_RADIUS) {
             console.log("Error: Out of Radius");
             return res.status(400).json({
-                message: `Out of range! You are ${Math.round(distanceInfo)}m away from customer. Max allowed is ${MAX_RADIUS}m.`
+                message: `Di luar jangkauan! Anda berjarak ${Math.round(distanceInfo)}m dari nasabah. Jarak maksimal ${MAX_RADIUS}m.`
             });
         }
 
@@ -161,7 +161,7 @@ const createVisit = async (req, res) => {
         res.status(201).json(visit);
     } catch (error) {
         console.error("CREATE VISIT ERROR:", error);
-        res.status(500).json({ message: 'Error creating visit', error: error.message });
+        res.status(500).json({ message: 'Gagal membuat kunjungan', error: error.message });
     }
 };
 

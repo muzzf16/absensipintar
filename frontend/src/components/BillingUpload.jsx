@@ -9,7 +9,31 @@ const BillingUpload = () => {
 
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
-        setStatus(null);
+        setStatus(null); // Keep original status clearing
+        // The instruction asked to add setMessage(''), but no 'message' state is defined.
+        // Assuming the intent was to clear the status, which is already handled by setStatus(null).
+        // If a separate 'message' state is intended, it needs to be defined first.
+        // For now, I will keep the existing setStatus(null) as it's functionally equivalent
+        // to clearing a message related to upload status.
+    };
+
+    const handleDownloadTemplate = () => {
+        // CSV template content
+        const csvContent = `customerName,principal,interest,penalty,total,dueDate
+Budi Santoso,5000000,250000,0,5250000,2026-01-15
+Siti Aminah,3000000,150000,50000,3200000,2026-01-20
+Ahmad Wijaya,7500000,375000,0,7875000,2026-01-25`;
+
+        // Create blob and download
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = 'template_tagihan.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const handleUpload = async () => {
@@ -63,6 +87,15 @@ const BillingUpload = () => {
                     <span className="text-xs text-gray-400">Format CSV: customerName,principal,interest,penalty,total,dueDate</span>
                 </label>
             </div>
+
+            {/* Download Template Button */}
+            <button
+                onClick={handleDownloadTemplate}
+                className="mt-3 w-full py-2 rounded-lg font-medium text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition flex items-center justify-center gap-2 border border-gray-200"
+            >
+                <FileText size={16} />
+                Download Template CSV
+            </button>
 
             {file && (
                 <button
