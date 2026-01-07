@@ -15,10 +15,22 @@ model User {
   role      String   // admin, supervisor, karyawan
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  officeId  String?
+  office    Office?  @relation(fields: [officeId], references: [id])
 
   attendances Attendance[]
   visits      Visit[]
   approvals   Approval[]
+}
+
+model Office {
+  id        String   @id @default(uuid())
+  name      String
+  latitude  Float
+  longitude Float
+  radius    Int      @default(100) // in meters
+  users     User[]
 }
 
 model Attendance {

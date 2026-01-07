@@ -1,4 +1,5 @@
 const prisma = require('../utils/db');
+const { getDistanceFromLatLonInMeters } = require('../utils/geoUtils');
 
 const checkIn = async (req, res) => {
     try {
@@ -23,6 +24,29 @@ const checkIn = async (req, res) => {
 
         const startOfDay = new Date(now.setHours(0, 0, 0, 0));
         const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+
+        // Get User and Office
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { office: true }
+        });
+
+        if (user.office) {
+            const distance = getDistanceFromLatLonInMeters(
+                parseFloat(user.office.latitude),
+                parseFloat(user.office.longitude),
+                parseFloat(latitude),
+                parseFloat(longitude)
+            );
+
+            console.log(`Office: ${user.office.name}, Radius: ${user.office.radius}m, Distance: ${distance.toFixed(2)}m`);
+
+            if (distance > user.office.radius) {
+                return res.status(400).json({
+                    message: `Anda berada di luar radius kantor (${distance.toFixed(0)}m). Maksimal ${user.office.radius}m.`
+                });
+            }
+        }
 
         console.log('Checking existing attendance...');
         const existingAttendance = await prisma.attendance.findFirst({

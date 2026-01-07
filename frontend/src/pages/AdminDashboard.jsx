@@ -1,21 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, Briefcase, Download, CheckCircle, Users, MapPin } from 'lucide-react';
+import { LogOut, Clock, Briefcase, Download, CheckCircle, Users, MapPin, Building } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/axiosConfig';
 import MapComponent from '../components/MapComponent';
 import AdminVisitDashboard from '../components/AdminVisitDashboard';
+import OfficeManagement from '../components/OfficeManagement';
 
 const AdminDashboard = ({ user }) => {
     const navigate = useNavigate();
     const [stats, setStats] = useState({ totalEmployees: 0, presentCount: 0, lateCount: 0, visitCount: 0 });
-    const [activeTab, setActiveTab] = useState('absensi'); // absensi or kunjungan
+    const [activeTab, setActiveTab] = useState('absensi'); // absensi, kunjungan, peta, kantor
     const [attendanceList, setAttendanceList] = useState([]);
     const [visitList, setVisitList] = useState([]);
+
+    const [showRegisterModal, setShowRegisterModal] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        role: 'karyawan',
+        officeId: ''
+    });
+
+    const [offices, setOffices] = useState([]);
 
     useEffect(() => {
         fetchStats();
         fetchData();
+        fetchOffices();
     }, [activeTab]);
+
+    const fetchOffices = async () => {
+        try {
+            const res = await api.get('/offices');
+            setOffices(res.data);
+        } catch (error) {
+            console.error('Error fetching offices:', error);
+        }
+    };
 
     const fetchStats = async () => {
         try {
@@ -69,6 +91,24 @@ const AdminDashboard = ({ user }) => {
         }
     };
 
+    const handleRegisterChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleRegisterSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/auth/register', formData);
+            alert('Registrasi berhasil!');
+            setShowRegisterModal(false);
+            setFormData({ name: '', email: '', password: '', role: 'karyawan', officeId: '' });
+            fetchStats(); // Update stats
+        } catch (error) {
+            console.error(error);
+            alert('Registrasi gagal: ' + (error.response?.data?.message || error.message));
+        }
+    };
+
     return (
         <div className="min-h-screen bg-white pb-20">
             {/* Header */}
@@ -77,10 +117,19 @@ const AdminDashboard = ({ user }) => {
                     <h2 className="text-xl font-bold text-gray-800">Admin Dashboard</h2>
                     <p className="text-xs text-gray-500">Monitoring Aktivitas Karyawan</p>
                 </div>
-                <button onClick={handleLogout} className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-bold hover:bg-red-50 transition">
-                    <LogOut size={14} />
-                    Keluar
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowRegisterModal(true)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition"
+                    >
+                        <Users size={14} />
+                        Tambah User
+                    </button>
+                    <button onClick={handleLogout} className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-bold hover:bg-red-50 transition">
+                        <LogOut size={14} />
+                        Keluar
+                    </button>
+                </div>
             </div>
 
             {/* Scrollable Content */}
@@ -148,35 +197,43 @@ const AdminDashboard = ({ user }) => {
 
                 {/* Tab Switcher */}
                 <div className="pt-4">
-                    <div className="bg-gray-50 p-1 rounded-xl flex mb-4">
+                    <div className="bg-gray-50 p-1 rounded-xl flex mb-4 overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('absensi')}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'absensi' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'absensi' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
                         >
                             <Clock size={14} />
                             Absensi
                         </button>
                         <button
                             onClick={() => setActiveTab('kunjungan')}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'kunjungan' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'kunjungan' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
                         >
                             <Briefcase size={14} />
                             Kunjungan
                         </button>
                         <button
                             onClick={() => setActiveTab('peta')}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'peta' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'peta' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
                         >
                             <MapPin size={14} />
                             Peta
                         </button>
+                        <button
+                            onClick={() => setActiveTab('kantor')}
+                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'kantor' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                        >
+                            <Building size={14} />
+                            Kantor
+                        </button>
                     </div>
 
-
-
-
-                    {/* Report Card / Map View */}
-                    {activeTab === 'peta' ? (
+                    {/* Report Card / Map View / Office View */}
+                    {activeTab === 'kantor' ? (
+                        <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4">
+                            <OfficeManagement />
+                        </div>
+                    ) : activeTab === 'peta' ? (
                         <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4">
                             <div className="mb-4">
                                 <h3 className="font-bold text-gray-800 text-sm">Peta Kunjungan</h3>
@@ -200,8 +257,6 @@ const AdminDashboard = ({ user }) => {
                                         Export
                                     </button>
                                 </div>
-                                {/* ... table ... */}
-
                                 {/* Table */}
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left">
@@ -275,6 +330,80 @@ const AdminDashboard = ({ user }) => {
                     )}
                 </div>
             </div>
+
+            {/* Registration Modal */}
+            {showRegisterModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-sm">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Registrasi Karyawan Baru</h3>
+                        <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleRegisterChange}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleRegisterChange}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                                <input
+                                    type="password"
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleRegisterChange}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
+                                <select
+                                    name="role"
+                                    value={formData.role}
+                                    onChange={handleRegisterChange}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                >
+                                    <option value="karyawan">Karyawan</option>
+                                    <option value="supervisor">Supervisor</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Penempatan Kantor</label>
+                                <select
+                                    name="officeId"
+                                    value={formData.officeId || ''}
+                                    onChange={handleRegisterChange}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                >
+                                    <option value="">-- Pilih Kantor --</option>
+                                    {offices.map(office => (
+                                        <option key={office.id} value={office.id}>{office.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-2 mt-4 pt-2">
+                                <button type="button" onClick={() => setShowRegisterModal(false)} className="flex-1 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600">Batal</button>
+                                <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700">Simpan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

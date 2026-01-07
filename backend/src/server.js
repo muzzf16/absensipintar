@@ -8,6 +8,7 @@ const visitRoutes = require('./routes/visitRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const billingRoutes = require('./routes/billingRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const officeRoutes = require('./routes/officeRoutes');
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/visits', visitRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/offices', officeRoutes);
 
 app.get('/', (req, res) => {
     res.send('AbsensiPintar API is running');

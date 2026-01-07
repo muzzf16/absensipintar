@@ -19,7 +19,7 @@ const EmployeeDashboard = ({ user, handleLogout }) => {
                         </div>
                         <div>
                             <h2 className="font-bold text-gray-900 leading-tight">{user.name || 'User Name'}</h2>
-                            <p className="text-xs text-gray-500">{user.role === 'supervisor' ? 'Head of Sales' : 'Software Engineer'}</p>
+                            <p className="text-xs text-gray-500">{user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Karyawan'}</p>
                         </div>
                     </div>
                     <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-red-500 transition">
