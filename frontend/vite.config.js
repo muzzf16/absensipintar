@@ -26,21 +26,13 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-<<<<<<< HEAD
-            src: 'logo.svg',
-=======
             src: '/icon-192.png',
->>>>>>> 9192d20189226cef059f41ee662f5bec0c28e5b2
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable'
           },
           {
-<<<<<<< HEAD
-            src: 'logo.svg',
-=======
             src: '/icon-512.png',
->>>>>>> 9192d20189226cef059f41ee662f5bec0c28e5b2
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

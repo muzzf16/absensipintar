@@ -43,13 +43,8 @@ const Login = () => {
             {/* Top Section - Blue Header */}
             <div className="bg-blue-500 h-[45vh] relative flex flex-col items-center justify-center text-white p-6 pb-16 rounded-b-[3rem] shadow-lg">
                 <div className="bg-white/20 p-4 rounded-2xl mb-4 backdrop-blur-sm">
-<<<<<<< HEAD
-                    <div className="bg-white text-blue-500 p-2 rounded-xl">
-                        <img src="/logo.svg" alt="App Logo" className="w-8 h-8" />
-=======
                     <div className="bg-white p-3 rounded-xl">
                         <img src="/bapera.jpg" alt="BAPERA Logo" className="w-16 h-16 object-contain" />
->>>>>>> 9192d20189226cef059f41ee662f5bec0c28e5b2
                     </div>
                 </div>
                 <h1 className="text-3xl font-bold mb-1">Absensi Mobile</h1>
