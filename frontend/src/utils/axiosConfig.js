@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+// Determine API base URL dynamically for network access
+const getBaseURL = () => {
+    const hostname = window.location.hostname;
+    // Use the same hostname as the frontend, but connect to backend port
+    return `http://${hostname}:5000/api`;
+};
+
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api', // Backend URL
+    baseURL: getBaseURL(),
+    withCredentials: true, // Include credentials in cross-origin requests
     headers: {
         'Content-Type': 'application/json',
     },
