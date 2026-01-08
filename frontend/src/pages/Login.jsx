@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/axiosConfig';
 import { Laptop, User } from 'lucide-react';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
 
         try {
             const response = await api.post('/auth/login', { email, password });
@@ -20,6 +23,8 @@ const Login = () => {
             navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -38,8 +43,13 @@ const Login = () => {
             {/* Top Section - Blue Header */}
             <div className="bg-blue-500 h-[45vh] relative flex flex-col items-center justify-center text-white p-6 pb-16 rounded-b-[3rem] shadow-lg">
                 <div className="bg-white/20 p-4 rounded-2xl mb-4 backdrop-blur-sm">
+<<<<<<< HEAD
                     <div className="bg-white text-blue-500 p-2 rounded-xl">
                         <img src="/logo.svg" alt="App Logo" className="w-8 h-8" />
+=======
+                    <div className="bg-white p-3 rounded-xl">
+                        <img src="/bapera.jpg" alt="BAPERA Logo" className="w-16 h-16 object-contain" />
+>>>>>>> 9192d20189226cef059f41ee662f5bec0c28e5b2
                     </div>
                 </div>
                 <h1 className="text-3xl font-bold mb-1">Absensi Mobile</h1>
@@ -100,9 +110,17 @@ const Login = () => {
                         <div className="pt-2">
                             <button
                                 type="submit"
-                                className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/30 transition transform active:scale-95"
+                                disabled={loading}
+                                className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/30 transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             >
-                                Masuk
+                                {loading ? (
+                                    <>
+                                        <LoadingSpinner size="sm" />
+                                        <span className="ml-2">Memproses...</span>
+                                    </>
+                                ) : (
+                                    'Masuk'
+                                )}
                             </button>
                         </div>
                     </form>
