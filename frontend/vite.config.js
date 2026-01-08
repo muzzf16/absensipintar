@@ -22,12 +22,12 @@ export default defineConfig({
         orientation: 'portrait',
         icons: [
           {
-            src: 'vite.svg',
+            src: 'logo.svg',
             sizes: '192x192',
             type: 'image/svg+xml'
           },
           {
-            src: 'vite.svg',
+            src: 'logo.svg',
             sizes: '512x512',
             type: 'image/svg+xml'
           }

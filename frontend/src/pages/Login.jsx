@@ -39,12 +39,7 @@ const Login = () => {
             <div className="bg-blue-500 h-[45vh] relative flex flex-col items-center justify-center text-white p-6 pb-16 rounded-b-[3rem] shadow-lg">
                 <div className="bg-white/20 p-4 rounded-2xl mb-4 backdrop-blur-sm">
                     <div className="bg-white text-blue-500 p-2 rounded-xl">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                            <circle cx="8.5" cy="7" r="4" />
-                            <line x1="20" y1="8" x2="20" y2="14" />
-                            <line x1="23" y1="11" x2="17" y2="11" />
-                        </svg>
+                        <img src="/logo.svg" alt="App Logo" className="w-8 h-8" />
                     </div>
                 </div>
                 <h1 className="text-3xl font-bold mb-1">Absensi Mobile</h1>
