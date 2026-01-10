@@ -6,3 +6,6 @@ build/
 coverage/
 .vscode/
 .idea/
+# Prisma / SQLite
+backend/prisma/*.db
+backend/prisma/*.sqlite
