@@ -5,22 +5,14 @@ import api from '../utils/axiosConfig';
 import MapComponent from '../components/MapComponent';
 import AdminVisitDashboard from '../components/AdminVisitDashboard';
 import OfficeManagement from '../components/OfficeManagement';
+import UserManagement from '../components/UserManagement';
 
 const AdminDashboard = ({ user }) => {
     const navigate = useNavigate();
     const [stats, setStats] = useState({ totalEmployees: 0, presentCount: 0, lateCount: 0, visitCount: 0 });
-    const [activeTab, setActiveTab] = useState('absensi'); // absensi, kunjungan, peta, kantor
+    const [activeTab, setActiveTab] = useState('absensi'); // absensi, kunjungan, peta, kantor, karyawan
     const [attendanceList, setAttendanceList] = useState([]);
     const [visitList, setVisitList] = useState([]);
-
-    const [showRegisterModal, setShowRegisterModal] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-        role: 'karyawan',
-        officeId: ''
-    });
 
     const [offices, setOffices] = useState([]);
 
@@ -91,24 +83,6 @@ const AdminDashboard = ({ user }) => {
         }
     };
 
-    const handleRegisterChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleRegisterSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/auth/register', formData);
-            alert('Registrasi berhasil!');
-            setShowRegisterModal(false);
-            setFormData({ name: '', email: '', password: '', role: 'karyawan', officeId: '' });
-            fetchStats(); // Update stats
-        } catch (error) {
-            console.error(error);
-            alert('Registrasi gagal: ' + (error.response?.data?.message || error.message));
-        }
-    };
-
     return (
         <div className="min-h-screen bg-white pb-20">
             {/* Header */}
@@ -118,13 +92,6 @@ const AdminDashboard = ({ user }) => {
                     <p className="text-xs text-gray-500">Monitoring Aktivitas Karyawan</p>
                 </div>
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => setShowRegisterModal(true)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition"
-                    >
-                        <Users size={14} />
-                        Tambah User
-                    </button>
                     <button onClick={handleLogout} className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-bold hover:bg-red-50 transition">
                         <LogOut size={14} />
                         Keluar
@@ -226,6 +193,13 @@ const AdminDashboard = ({ user }) => {
                             <Building size={14} />
                             Kantor
                         </button>
+                        <button
+                            onClick={() => setActiveTab('karyawan')}
+                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'karyawan' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                        >
+                            <Users size={14} />
+                            Karyawan
+                        </button>
                     </div>
 
                     {/* Report Card / Map View / Office View */}
@@ -233,6 +207,8 @@ const AdminDashboard = ({ user }) => {
                         <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4">
                             <OfficeManagement />
                         </div>
+                    ) : activeTab === 'karyawan' ? (
+                        <UserManagement offices={offices} />
                     ) : activeTab === 'peta' ? (
                         <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4">
                             <div className="mb-4">
@@ -331,79 +307,7 @@ const AdminDashboard = ({ user }) => {
                 </div>
             </div>
 
-            {/* Registration Modal */}
-            {showRegisterModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-sm">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4">Registrasi Karyawan Baru</h3>
-                        <form onSubmit={handleRegisterSubmit} className="space-y-3">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleRegisterChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleRegisterChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleRegisterChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
-                                <select
-                                    name="role"
-                                    value={formData.role}
-                                    onChange={handleRegisterChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                >
-                                    <option value="karyawan">Karyawan</option>
-                                    <option value="supervisor">Supervisor</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Penempatan Kantor</label>
-                                <select
-                                    name="officeId"
-                                    value={formData.officeId || ''}
-                                    onChange={handleRegisterChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                >
-                                    <option value="">-- Pilih Kantor --</option>
-                                    {offices.map(office => (
-                                        <option key={office.id} value={office.id}>{office.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex gap-2 mt-4 pt-2">
-                                <button type="button" onClick={() => setShowRegisterModal(false)} className="flex-1 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600">Batal</button>
-                                <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700">Simpan</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* Modal removed - managed in UserManagement */}
         </div>
     );
 };
