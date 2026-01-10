@@ -26,7 +26,7 @@ const getAllUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
     try {
-        const { name, email, password, role, officeId, nik, phone, position } = req.body;
+        const { name, email, password, role, officeId } = req.body;
 
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
@@ -34,11 +34,6 @@ const createUser = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Determine data to save based on schema
-        // Note: checking if nik/phone/position exist in schema later, but standard User usually has these.
-        // Based on previous schema view, User only has: id, name, email, password, role, officeId, createdAt, updatedAt
-        // I will stick to the schema I saw: name, email, password, role, officeId.
 
         const userData = {
             name,
@@ -96,13 +91,43 @@ const deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Prevent deleting yourself (middleware usually handles req.user, assuming req.user.userId exists from auth middleware)
+        // Prevent deleting yourself
         if (req.user && req.user.userId === id) {
             return res.status(400).json({ message: 'Cannot delete your own account' });
         }
 
-        await prisma.user.delete({ where: { id } });
-        res.json({ message: 'User deleted successfully' });
+        // Manual Cascade Delete using Transaction
+        await prisma.$transaction(async (prisma) => {
+            // 1. Delete Approvals where user is the approver
+            await prisma.approval.deleteMany({
+                where: { approverId: id }
+            });
+
+            // 2. Delete Approvals belonging to user's visits
+            await prisma.approval.deleteMany({
+                where: { visit: { userId: id } }
+            });
+
+            // 3. Delete VisitProducts belonging to user's visits
+            await prisma.visitProduct.deleteMany({
+                where: { visit: { userId: id } }
+            });
+
+            // 4. Delete Visits belonging to user
+            await prisma.visit.deleteMany({
+                where: { userId: id }
+            });
+
+            // 5. Delete Attendances belonging to user
+            await prisma.attendance.deleteMany({
+                where: { userId: id }
+            });
+
+            // 6. Finally delete the User
+            await prisma.user.delete({ where: { id } });
+        });
+
+        res.json({ message: 'User and related data deleted successfully' });
     } catch (error) {
         if (error.code === 'P2025') {
             return res.status(404).json({ message: 'User not found' });
