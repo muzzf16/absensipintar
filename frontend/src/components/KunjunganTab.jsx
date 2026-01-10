@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Briefcase, MapPin, AlertCircle, CheckCircle, CreditCard, User } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Briefcase, MapPin, AlertCircle, CheckCircle, CreditCard, User, Camera, X } from 'lucide-react';
 import api from '../utils/axiosConfig';
 
 const PRODUCT_OPTIONS = [
@@ -18,6 +18,12 @@ const KunjunganTab = () => {
     const [recentVisits, setRecentVisits] = useState([]);
     const [loading, setLoading] = useState(false);
     const [gpsLoading, setGpsLoading] = useState(false);
+
+    // Camera State
+    const [showCamera, setShowCamera] = useState(false);
+    const [cameraStream, setCameraStream] = useState(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
 
     const [formData, setFormData] = useState({
         customerId: '',
@@ -68,6 +74,65 @@ const KunjunganTab = () => {
         } catch (err) {
             console.error('Failed to fetch visits:', err);
         }
+    };
+
+    const handleOpenCamera = async () => {
+        setShowCamera(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }, // Default to back camera for visits
+                audio: false
+            });
+            setCameraStream(stream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (err) {
+            // Fallback to user camera if environment fails (e.g. laptop)
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                setCameraStream(stream);
+                if (videoRef.current) videoRef.current.srcObject = stream;
+            } catch (error) {
+                alert('Gagal mengakses kamera. Pastikan izin kamera diberikan.');
+                setShowCamera(false);
+            }
+        }
+    };
+
+    const takePhoto = () => {
+        if (!videoRef.current) return;
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
+
+        // Set dimensions (reduce size for performance/storage)
+        const maxWidth = 800;
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+
+        if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, width, height);
+
+        // Compress to JPEG 0.6
+        const photoDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        setFormData({ ...formData, photoUrl: photoDataUrl });
+        closeCamera();
+    };
+
+    const closeCamera = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+        }
+        setShowCamera(false);
+        setCameraStream(null);
     };
 
     const captureGPS = () => {
@@ -135,6 +200,10 @@ const KunjunganTab = () => {
         }
         if (!formData.latitude || !formData.longitude) {
             alert('Lokasi GPS wajib ditangkap. Klik "Tangkap Lokasi GPS"');
+            return;
+        }
+        if (!formData.photoUrl) {
+            alert('Foto kunjungan wajib diambil. Klik "Ambil Foto"');
             return;
         }
 
@@ -513,6 +582,45 @@ const KunjunganTab = () => {
                             )}
                         </div>
 
+                        {/* Photo Capture */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Foto Kunjungan *</label>
+
+                            {formData.photoUrl ? (
+                                <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                                    <img src={formData.photoUrl} alt="Visit Proof" className="w-full h-48 object-cover" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, photoUrl: '' })}
+                                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                    <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] p-1 text-center">
+                                        Foto berhasil diambil
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleOpenCamera}
+                                    className="w-full border-2 border-dashed border-gray-200 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center hover:bg-gray-100 transition"
+                                >
+                                    <Camera size={24} className="mb-2 text-gray-400" />
+                                    <span className="text-xs text-gray-600">
+                                        Klik untuk ambil Foto Selfie / Lokasi
+                                    </span>
+                                </button>
+                            )}
+
+                            {!formData.photoUrl && (
+                                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                    <AlertCircle size={12} />
+                                    Foto wajib disertakan
+                                </p>
+                            )}
+                        </div>
+
                         {/* Submit Button */}
                         <button
                             type="submit"
@@ -527,6 +635,37 @@ const KunjunganTab = () => {
                     </form>
                 </div>
             )}
+
+            {/* Camera Modal */}
+            {showCamera && (
+                <div className="fixed inset-0 bg-black z-50 flex flex-col">
+                    <div className="relative flex-1 bg-black">
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-cover"
+                        />
+                        {/* Close Button */}
+                        <button
+                            onClick={closeCamera}
+                            className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <div className="p-6 bg-black flex justify-center pb-10">
+                        <button
+                            onClick={takePhoto}
+                            className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center bg-white/20 active:bg-white/50 transition"
+                        >
+                            <div className="w-12 h-12 bg-white rounded-full"></div>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
     );
 };
