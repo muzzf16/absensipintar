@@ -88,8 +88,12 @@ const AdminDashboard = ({ user }) => {
             {/* Header */}
             <div className="p-6 border-b border-gray-100 flex justify-between items-start">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800">Admin Dashboard</h2>
-                    <p className="text-xs text-gray-500">Monitoring Aktivitas Karyawan</p>
+                    <h2 className="text-xl font-bold text-gray-800">
+                        {user.role === 'admin' ? 'Admin Dashboard' : 'Supervisor Dashboard'}
+                    </h2>
+                    <p className="text-xs text-gray-500">
+                        Halo, <span className="font-bold">{user.name}</span> ({user.role})
+                    </p>
                 </div>
                 <div className="flex gap-2">
                     <button onClick={handleLogout} className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-bold hover:bg-red-50 transition">
@@ -186,20 +190,26 @@ const AdminDashboard = ({ user }) => {
                             <MapPin size={14} />
                             Peta
                         </button>
-                        <button
-                            onClick={() => setActiveTab('kantor')}
-                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'kantor' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
-                        >
-                            <Building size={14} />
-                            Kantor
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('karyawan')}
-                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'karyawan' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
-                        >
-                            <Users size={14} />
-                            Karyawan
-                        </button>
+
+                        {/* Restricted Tabs (Admin & Supervisor) */}
+                        {(user.role === 'admin' || user.role === 'supervisor') && (
+                            <>
+                                <button
+                                    onClick={() => setActiveTab('kantor')}
+                                    className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'kantor' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                                >
+                                    <Building size={14} />
+                                    Kantor
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('karyawan')}
+                                    className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'karyawan' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                                >
+                                    <Users size={14} />
+                                    Karyawan
+                                </button>
+                            </>
+                        )}
                     </div>
 
                     {/* Report Card / Map View / Office View */}

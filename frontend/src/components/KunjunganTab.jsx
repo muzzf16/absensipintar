@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Briefcase, MapPin, AlertCircle, CheckCircle, CreditCard, User, Camera, X } from 'lucide-react';
+import { Briefcase, MapPin, AlertCircle, CheckCircle, CreditCard, User, Camera, X, Calendar, ChevronRight } from 'lucide-react';
 import api from '../utils/axiosConfig';
 
 const PRODUCT_OPTIONS = [
@@ -24,6 +24,11 @@ const KunjunganTab = () => {
     const [cameraStream, setCameraStream] = useState(null);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
+
+    // History Mode
+    const [showHistory, setShowHistory] = useState(false);
+    const [visitHistory, setVisitHistory] = useState([]);
+
 
     const [formData, setFormData] = useState({
         customerId: '',
@@ -71,10 +76,26 @@ const KunjunganTab = () => {
         try {
             const res = await api.get('/visits');
             setRecentVisits(res.data.slice(0, 3)); // Get latest 3 visits
+            setVisitHistory(res.data); // Store full history
         } catch (err) {
             console.error('Failed to fetch visits:', err);
         }
     };
+
+    // Group visits by date
+    const groupedVisits = visitHistory.reduce((groups, visit) => {
+        const date = new Date(visit.visitTime).toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        if (!groups[date]) {
+            groups[date] = [];
+        }
+        groups[date].push(visit);
+        return groups;
+    }, {});
 
     const handleOpenCamera = async () => {
         setShowCamera(true);

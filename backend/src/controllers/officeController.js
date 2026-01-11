@@ -2,7 +2,25 @@ const prisma = require('../utils/db');
 
 const getAllOffices = async (req, res) => {
     try {
+        const { userId, role } = req.user;
+        let where = {};
+
+        if (role === 'supervisor') {
+            const supervisor = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { officeId: true }
+            });
+
+            if (supervisor?.officeId) {
+                where.id = supervisor.officeId;
+            } else {
+                // Safe fallback: if supervisor has no office, return nothing (or handle gracefully)
+                where.id = 'non-existent-id';
+            }
+        }
+
         const offices = await prisma.office.findMany({
+            where,
             include: { _count: { select: { users: true } } }
         });
         res.json(offices);

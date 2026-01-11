@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, Trash2, Save, X } from 'lucide-react';
+import { MapPin, Plus, Trash2, Save, X, Pencil } from 'lucide-react';
 import api from '../utils/axiosConfig';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -29,6 +29,8 @@ const LocationMarker = ({ setFormData }) => {
 const OfficeManagement = () => {
     const [offices, setOffices] = useState([]);
     const [showModal, setShowModal] = useState(false);
+    const [isEditing, setIsEditing] = useState(false); // Track edit mode
+    const [currentId, setCurrentId] = useState(null); // Track ID being edited
     const [formData, setFormData] = useState({
         name: '',
         latitude: '',
@@ -53,16 +55,39 @@ const OfficeManagement = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleEdit = (office) => {
+        setFormData({
+            name: office.name,
+            latitude: office.latitude,
+            longitude: office.longitude,
+            radius: office.radius
+        });
+        setCurrentId(office.id);
+        setIsEditing(true);
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setIsEditing(false);
+        setCurrentId(null);
+        setFormData({ name: '', latitude: '', longitude: '', radius: 100 });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/offices', formData);
-            alert('Kantor berhasil ditambahkan!');
-            setShowModal(false);
-            setFormData({ name: '', latitude: '', longitude: '', radius: 100 });
+            if (isEditing) {
+                await api.put(`/offices/${currentId}`, formData);
+                alert('Kantor berhasil diperbarui!');
+            } else {
+                await api.post('/offices', formData);
+                alert('Kantor berhasil ditambahkan!');
+            }
             fetchOffices();
+            handleCloseModal();
         } catch (error) {
-            alert('Gagal menambahkan kantor: ' + (error.response?.data?.message || error.message));
+            alert(`Gagal ${isEditing ? 'memperbarui' : 'menambahkan'} kantor: ` + (error.response?.data?.message || error.message));
         }
     };
 
@@ -85,7 +110,10 @@ const OfficeManagement = () => {
                     <p className="text-[10px] text-gray-400">Kelola lokasi kantor untuk validasi absensi.</p>
                 </div>
                 <button
-                    onClick={() => setShowModal(true)}
+                    onClick={() => {
+                        handleCloseModal(); // Ensure clean state
+                        setShowModal(true);
+                    }}
                     className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700"
                 >
                     <Plus size={12} />
@@ -106,9 +134,14 @@ const OfficeManagement = () => {
                                     <p className="text-[10px] text-gray-400">{office.radius}m Radius</p>
                                 </div>
                             </div>
-                            <button onClick={() => handleDelete(office.id)} className="text-gray-400 hover:text-red-500">
-                                <Trash2 size={14} />
-                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={() => handleEdit(office)} className="text-gray-400 hover:text-blue-500" title="Edit">
+                                    <Pencil size={14} />
+                                </button>
+                                <button onClick={() => handleDelete(office.id)} className="text-gray-400 hover:text-red-500" title="Hapus">
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
                         </div>
                         <div className="text-[10px] text-gray-500 space-y-1">
                             <div className="flex justify-between">
@@ -133,8 +166,8 @@ const OfficeManagement = () => {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
                     <div className="bg-white rounded-xl p-6 w-full max-w-lg my-8">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-gray-800">Tambah Kantor Baru</h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                            <h3 className="text-lg font-bold text-gray-800">{isEditing ? 'Edit Kantor' : 'Tambah Kantor Baru'}</h3>
+                            <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
                                 <X size={20} />
                             </button>
                         </div>
@@ -155,7 +188,7 @@ const OfficeManagement = () => {
                             {/* Map Container */}
                             <div className="h-64 rounded-lg overflow-hidden border border-gray-200 relative z-0">
                                 <MapContainer
-                                    center={[-6.200000, 106.816666]}
+                                    center={[formData.latitude || -6.200000, formData.longitude || 106.816666]}
                                     zoom={13}
                                     style={{ height: '100%', width: '100%' }}
                                 >
@@ -213,7 +246,7 @@ const OfficeManagement = () => {
                             <div className="pt-2">
                                 <button type="submit" className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 flex justify-center items-center gap-2">
                                     <Save size={16} />
-                                    Simpan Kantor
+                                    {isEditing ? 'Simpan Perubahan' : 'Simpan Kantor'}
                                 </button>
                             </div>
                         </form>

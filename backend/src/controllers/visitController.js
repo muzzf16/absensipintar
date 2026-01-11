@@ -173,10 +173,22 @@ const getVisits = async (req, res) => {
 
         let where = {};
 
-        // Base logic: Karyawan sees own, Admin sees all (or filtered)
+        // Base logic: Karyawan sees own, Admin sees all, Supervisor sees office
         if (role === 'karyawan') {
             where.userId = userId;
-        } else if (filterUserId) {
+        } else if (role === 'supervisor') {
+            const supervisor = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { officeId: true }
+            });
+
+            if (supervisor?.officeId) {
+                where.user = { officeId: supervisor.officeId };
+            }
+        }
+
+        // Filter by specific user if requested (and allowed)
+        if (filterUserId) {
             where.userId = filterUserId;
         }
 
@@ -212,9 +224,23 @@ const getVisits = async (req, res) => {
 const exportVisitsCSV = async (req, res) => {
     try {
         const { startDate, endDate, customerId, userId: filterUserId } = req.query;
+        const { userId, role } = req.user; // Get user context
         let where = {};
 
-        // Reuse filter logic (simplified for brevity, ideally shared helper)
+        // Reuse filter logic
+        if (role === 'karyawan') {
+            where.userId = userId;
+        } else if (role === 'supervisor') {
+            const supervisor = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { officeId: true }
+            });
+
+            if (supervisor?.officeId) {
+                where.user = { officeId: supervisor.officeId };
+            }
+        }
+
         if (filterUserId) where.userId = filterUserId;
         if (customerId) where.customerId = customerId;
         if (startDate && endDate) {
@@ -296,9 +322,23 @@ const approveVisit = async (req, res) => {
 const exportVisitsPDF = async (req, res) => {
     try {
         const { startDate, endDate, customerId, userId: filterUserId } = req.query;
+        const { userId, role } = req.user;
         let where = {};
 
         // Reuse filter logic
+        if (role === 'karyawan') {
+            where.userId = userId;
+        } else if (role === 'supervisor') {
+            const supervisor = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { officeId: true }
+            });
+
+            if (supervisor?.officeId) {
+                where.user = { officeId: supervisor.officeId };
+            }
+        }
+
         if (filterUserId) where.userId = filterUserId;
         if (customerId) where.customerId = customerId;
         if (startDate && endDate) {

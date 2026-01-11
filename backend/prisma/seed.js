@@ -8,42 +8,159 @@ async function main() {
     const password = await bcrypt.hash('password123', 10);
     const adminPassword = await bcrypt.hash('admin123', 10);
 
+    // 0. Create Offices
+    console.log('🏢 Seeding Offices...');
+    // Kantor Cabang Limpung
+    const officeLimpung = await prisma.office.upsert({
+        where: { id: 'office-limpung' },
+        update: {},
+        create: {
+            id: 'office-limpung',
+            name: 'Kantor Cabang Limpung',
+            latitude: -7.000000,
+            longitude: 109.900000,
+            radius: 500
+        }
+    });
+
+    // Kantor Cabang Bandar
+    const officeBandar = await prisma.office.upsert({
+        where: { id: 'office-bandar' },
+        update: {},
+        create: {
+            id: 'office-bandar',
+            name: 'Kantor Cabang Bandar',
+            latitude: -7.020000,
+            longitude: 109.800000,
+            radius: 500
+        }
+    });
+
     // 1. Create Users
     console.log('👤 Seeding Users...');
 
-    // Admin
+    // Admin (Global)
     const admin = await prisma.user.upsert({
         where: { email: 'admin@company.com' },
-        update: {},
+        update: {
+            password: adminPassword,
+            role: 'admin',
+            officeId: 'office-limpung' // Defaulting to one for now, or null if admin is global
+        },
         create: {
             email: 'admin@company.com',
-            name: 'Admin Supervisor',
+            name: 'Admin HR',
+            password: adminPassword,
+            role: 'admin',
+            officeId: 'office-limpung'
+        },
+    });
+
+    // Supervisor Limpung
+    const spvLimpung = await prisma.user.upsert({
+        where: { email: 'spv.limpung@company.com' },
+        update: {
             password: adminPassword,
             role: 'supervisor',
+            officeId: 'office-limpung',
+            name: 'SPV Limpung'
+        },
+        create: {
+            email: 'spv.limpung@company.com',
+            name: 'SPV Limpung',
+            password: adminPassword,
+            role: 'supervisor',
+            officeId: 'office-limpung'
         },
     });
 
-    // Employee 1
-    const user1 = await prisma.user.upsert({
-        where: { email: 'user1@company.com' },
-        update: {},
+    // Supervisor Bandar
+    const spvBandar = await prisma.user.upsert({
+        where: { email: 'spv.bandar@company.com' },
+        update: {
+            password: adminPassword,
+            role: 'supervisor',
+            officeId: 'office-bandar',
+            name: 'SPV Bandar'
+        },
         create: {
-            email: 'user1@company.com',
-            name: 'Budi Santoso',
-            password: password,
-            role: 'karyawan',
+            email: 'spv.bandar@company.com',
+            name: 'SPV Bandar',
+            password: adminPassword,
+            role: 'supervisor',
+            officeId: 'office-bandar'
         },
     });
 
-    // Employee 2
-    const user2 = await prisma.user.upsert({
-        where: { email: 'user2@company.com' },
-        update: {},
-        create: {
-            email: 'user2@company.com',
-            name: 'Andi Wijaya',
+    // Employee Limpung 1
+    const userLimpung1 = await prisma.user.upsert({
+        where: { email: 'karyawan.limpung1@company.com' },
+        update: {
             password: password,
             role: 'karyawan',
+            officeId: 'office-limpung',
+            name: 'Karyawan Limpung 1'
+        },
+        create: {
+            email: 'karyawan.limpung1@company.com',
+            name: 'Karyawan Limpung 1',
+            password: password,
+            role: 'karyawan',
+            officeId: 'office-limpung'
+        },
+    });
+
+    // Employee Limpung 2
+    const userLimpung2 = await prisma.user.upsert({
+        where: { email: 'karyawan.limpung2@company.com' },
+        update: {
+            password: password,
+            role: 'karyawan',
+            officeId: 'office-limpung',
+            name: 'Karyawan Limpung 2'
+        },
+        create: {
+            email: 'karyawan.limpung2@company.com',
+            name: 'Karyawan Limpung 2',
+            password: password,
+            role: 'karyawan',
+            officeId: 'office-limpung'
+        },
+    });
+
+    // Employee Bandar 1
+    const userBandar1 = await prisma.user.upsert({
+        where: { email: 'karyawan.bandar1@company.com' },
+        update: {
+            password: password,
+            role: 'karyawan',
+            officeId: 'office-bandar',
+            name: 'Karyawan Bandar 1'
+        },
+        create: {
+            email: 'karyawan.bandar1@company.com',
+            name: 'Karyawan Bandar 1',
+            password: password,
+            role: 'karyawan',
+            officeId: 'office-bandar'
+        },
+    });
+
+    // Employee Bandar 2
+    const userBandar2 = await prisma.user.upsert({
+        where: { email: 'karyawan.bandar2@company.com' },
+        update: {
+            password: password,
+            role: 'karyawan',
+            officeId: 'office-bandar',
+            name: 'Karyawan Bandar 2'
+        },
+        create: {
+            email: 'karyawan.bandar2@company.com',
+            name: 'Karyawan Bandar 2',
+            password: password,
+            role: 'karyawan',
+            officeId: 'office-bandar'
         },
     });
 

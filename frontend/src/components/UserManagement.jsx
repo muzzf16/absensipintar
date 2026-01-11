@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Edit2, Trash2, Plus, X, Search } from 'lucide-react';
+import { Users, Edit2, Trash2, Plus, X, Search, Eye, EyeOff } from 'lucide-react';
 import api from '../utils/axiosConfig';
 
 const UserManagement = ({ offices }) => {
@@ -7,6 +7,8 @@ const UserManagement = ({ offices }) => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
+    const [error, setError] = useState(null); // Added error state
+    const [showPassword, setShowPassword] = useState(false); // Added showPassword state
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -82,6 +84,7 @@ const UserManagement = ({ offices }) => {
             position: user.position || '',
             nik: user.nik || ''
         });
+        setShowPassword(false); // Reset showPassword state
         setShowModal(true);
     };
 
@@ -97,6 +100,8 @@ const UserManagement = ({ offices }) => {
             position: '',
             nik: ''
         });
+        setShowPassword(false); // Reset showPassword state
+        setError(null); // Reset error state
     };
 
     return (
@@ -217,14 +222,24 @@ const UserManagement = ({ offices }) => {
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
                                     Password {editingUser && <span className="text-gray-400 font-normal">(Kosongkan jika tidak diubah)</span>}
                                 </label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleInputChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                                    required={!editingUser}
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 pr-10"
+                                        placeholder={editingUser ? "******" : "Password"}
+                                        required={!editingUser}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    >
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">

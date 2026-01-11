@@ -155,8 +155,28 @@ const getHistory = async (req, res) => {
 
 const getAllAttendance = async (req, res) => {
     try {
+        const userId = req.user.userId;
+        const role = req.user.role;
+        let where = {};
+
+        if (role === 'supervisor') {
+            const supervisor = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { officeId: true }
+            });
+
+            if (supervisor?.officeId) {
+                where = {
+                    user: {
+                        officeId: supervisor.officeId
+                    }
+                };
+            }
+        }
+
         const attendances = await prisma.attendance.findMany({
-            include: { user: { select: { name: true, role: true } } },
+            where,
+            include: { user: { select: { name: true, role: true, officeId: true } } },
             orderBy: { attendanceDate: 'desc' },
             take: 100
         });
@@ -168,19 +188,41 @@ const getAllAttendance = async (req, res) => {
 
 const getStats = async (req, res) => {
     try {
+        const userId = req.user.userId;
+        const role = req.user.role;
+
+        let userFilter = {}; // For filtering Counts based on Office
+
+        if (role === 'supervisor') {
+            const supervisor = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { officeId: true }
+            });
+
+            if (supervisor?.officeId) {
+                userFilter = { officeId: supervisor.officeId };
+            }
+        }
+
         // Simple stats for today
         const now = new Date();
         const startOfDay = new Date(now.setHours(0, 0, 0, 0));
         const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-        const totalEmployees = await prisma.user.count({ where: { role: 'karyawan' } });
+        const totalEmployees = await prisma.user.count({
+            where: {
+                role: 'karyawan',
+                ...userFilter
+            }
+        });
 
         const attendancesToday = await prisma.attendance.findMany({
             where: {
                 attendanceDate: {
                     gte: startOfDay,
                     lte: endOfDay,
-                }
+                },
+                user: userFilter // Filter attendance by user's office
             }
         });
 
@@ -197,7 +239,8 @@ const getStats = async (req, res) => {
                 visitTime: {
                     gte: startOfDay,
                     lte: endOfDay,
-                }
+                },
+                user: userFilter // Filter visits by user's office
             }
         });
 

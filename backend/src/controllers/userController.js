@@ -3,7 +3,29 @@ const bcrypt = require('bcryptjs');
 
 const getAllUsers = async (req, res) => {
     try {
+        const { userId, role } = req.user;
+        let where = {};
+
+        if (role === 'supervisor') {
+            const supervisor = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { officeId: true }
+            });
+
+            if (supervisor?.officeId) {
+                where.officeId = supervisor.officeId;
+            } else {
+                // If supervisor has no office, maybe show no users or all? 
+                // Sticking to strict: show empty or self? 
+                // Let's assume supervisor MUST have office. If not, safe default empty or just self?
+                // For now: don't restrict if no office assigned (fallback), OR return empty.
+                // Better: return empty to avoid leak.
+                where.officeId = 'non-existent-id';
+            }
+        }
+
         const users = await prisma.user.findMany({
+            where,
             include: {
                 office: true
             },
