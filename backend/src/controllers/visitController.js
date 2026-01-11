@@ -158,6 +158,21 @@ const createVisit = async (req, res) => {
         console.log("Visit Created:", visit);
         console.log("---------------- CREATE VISIT END ----------------");
 
+        // NOTIFICATION TRIGGER
+        // user is already fetched or available in req.user? req.user has minimal info.
+        // Let's fetch user details for officeId
+        const userDetails = await prisma.user.findUnique({ where: { id: userId } });
+        if (userDetails && userDetails.officeId) {
+            const { notifySupervisor } = require('../services/notificationService');
+            notifySupervisor(
+                userDetails.officeId,
+                'Kunjungan Baru',
+                `${userDetails.name} membuat kunjungan ke ${customerName || 'Nasabah'}.`,
+                'info',
+                visit.id
+            ).catch(err => console.error('Notification Error:', err));
+        }
+
         res.status(201).json(visit);
     } catch (error) {
         console.error("CREATE VISIT ERROR:", error);

@@ -6,6 +6,7 @@ import MapComponent from '../components/MapComponent';
 import AdminVisitDashboard from '../components/AdminVisitDashboard';
 import OfficeManagement from '../components/OfficeManagement';
 import UserManagement from '../components/UserManagement';
+import NotificationDropdown from '../components/NotificationDropdown';
 
 const AdminDashboard = ({ user }) => {
     const navigate = useNavigate();
@@ -95,7 +96,8 @@ const AdminDashboard = ({ user }) => {
                         Halo, <span className="font-bold">{user.name}</span> ({user.role})
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                    <NotificationDropdown />
                     <button onClick={handleLogout} className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs font-bold hover:bg-red-50 transition">
                         <LogOut size={14} />
                         Keluar

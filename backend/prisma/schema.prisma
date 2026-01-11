@@ -125,3 +125,16 @@ model Approval {
   visit    Visit @relation(fields: [visitId], references: [id])
   approver User  @relation(fields: [approverId], references: [id])
 }
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   // Receiver (Supervisor/Admin)
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  type        String   // info, warning, success
+  referenceId String?  // ID of related object
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+}

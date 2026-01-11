@@ -77,6 +77,20 @@ const checkIn = async (req, res) => {
         });
 
         console.log('SUCCESS: Attendance created:', attendance.id);
+
+        // NOTIFICATION TRIGGER
+        if (user.officeId) {
+            const { notifySupervisor } = require('../services/notificationService');
+            // Don't await to avoid blocking response
+            notifySupervisor(
+                user.officeId,
+                'Absensi Masuk',
+                `${user.name} baru saja melakukan Check In.`,
+                'success',
+                attendance.id
+            ).catch(err => console.error('Notification Error:', err));
+        }
+
         res.status(201).json({ message: 'Check-in successful', attendance });
     } catch (error) {
         console.error('=== CHECK-IN ERROR ===');
@@ -132,6 +146,22 @@ const checkOut = async (req, res) => {
                 checkOutLongitude: parseFloat(longitude),
             },
         });
+
+        // NOTIFICATION TRIGGER
+        // We need user info to get officeId and name. Attendance has userId.
+        // Fetch user if not available in req.user (req.user has id/role, maybe not name/officeId)
+        // Let's fetch user briefly
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (user && user.officeId) {
+            const { notifySupervisor } = require('../services/notificationService');
+            notifySupervisor(
+                user.officeId,
+                'Absensi Pulang',
+                `${user.name} baru saja melakukan Check Out.`,
+                'info',
+                updatedAttendance.id
+            ).catch(err => console.error('Notification Error:', err));
+        }
 
         res.json({ message: 'Check-out successful', attendance: updatedAttendance });
     } catch (error) {
