@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../utils/axiosConfig';
-import { MapPin, Camera, X, CheckCircle, Loader } from 'lucide-react';
+import { MapPin, Camera, X, CheckCircle, Loader, AlertTriangle } from 'lucide-react';
 
 const AbsensiTab = ({ user }) => {
     const [status, setStatus] = useState('none');
@@ -22,6 +22,7 @@ const AbsensiTab = ({ user }) => {
     const [gpsData, setGpsData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [gpsLoading, setGpsLoading] = useState(false);
+    const [gpsRetryCount, setGpsRetryCount] = useState(0);
 
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -86,20 +87,66 @@ const AbsensiTab = ({ user }) => {
         }
     };
 
-    const captureGPS = () => {
+
+    const captureGPS = (isRetry = false) => {
+        if (!isRetry) {
+            setGpsRetryCount(0); // Reset retry count on new capture
+        }
+
         setGpsLoading(true);
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    setGpsData({
+                    const accuracy = position.coords.accuracy;
+                    const gpsResult = {
                         latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    });
+                        longitude: position.coords.longitude,
+                        accuracy: accuracy
+                    };
+
+                    // Check GPS accuracy quality
+                    if (accuracy > 100 && gpsRetryCount < 3) {
+                        // Poor accuracy, auto-retry
+                        setGpsRetryCount(prev => prev + 1);
+                        setGpsLoading(false);
+
+                        const retryMsg = `GPS kurang akurat (±${accuracy.toFixed(0)}m).\nMencoba lagi... (${gpsRetryCount + 1}/3)\n\nTips: Pindah ke dekat jendela atau ke luar ruangan.`;
+                        alert(retryMsg);
+
+                        // Retry after 2 seconds
+                        setTimeout(() => captureGPS(true), 2000);
+                        return;
+                    }
+
+                    // Accept GPS (either good accuracy or max retries reached)
+                    setGpsData(gpsResult);
                     setGpsLoading(false);
+                    setGpsRetryCount(0);
+
+                    // Warn user if accuracy is still poor after retries
+                    if (accuracy > 100) {
+                        alert(`⚠️ Peringatan: GPS kurang akurat (±${accuracy.toFixed(0)}m)\n\nUntuk akurasi terbaik:\n- Keluar ruangan atau dekat jendela\n- Pastikan GPS device aktif\n- Tunggu beberapa detik lagi`);
+                    }
                 },
                 (error) => {
                     setGpsLoading(false);
-                    alert('Gagal mendapatkan lokasi GPS. Pastikan GPS aktif.');
+                    setGpsRetryCount(0);
+                    console.error('GPS Error:', error);
+
+                    let errorMsg = 'Gagal mendapatkan lokasi GPS.\n\n';
+                    if (error.code === 1) {
+                        errorMsg += 'Izin lokasi ditolak. Aktifkan izin lokasi di browser.';
+                    } else if (error.code === 2) {
+                        errorMsg += 'Lokasi tidak tersedia. Pastikan GPS aktif.';
+                    } else if (error.code === 3) {
+                        errorMsg += 'Timeout. Coba lagi di tempat dengan sinyal GPS lebih baik.';
+                    }
+                    alert(errorMsg);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000, // Increased to 15s for better GPS lock
+                    maximumAge: 0
                 }
             );
         } else {
@@ -342,17 +389,42 @@ const AbsensiTab = ({ user }) => {
                         </div>
 
                         {/* GPS Status */}
-                        <div className={`p-3 rounded-lg mb-4 flex items-center gap-2 ${gpsData ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                        <div className={`p-3 rounded-lg mb-4 flex items-center gap-2 ${gpsData
+                                ? gpsData.accuracy > 100
+                                    ? 'bg-red-50 text-red-700 border border-red-200'
+                                    : gpsData.accuracy > 50
+                                        ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                        : 'bg-green-50 text-green-700 border border-green-200'
+                                : 'bg-blue-50 text-blue-700'
                             }`}>
                             {gpsLoading ? (
                                 <>
                                     <Loader size={16} className="animate-spin" />
-                                    <span className="text-xs">Menangkap GPS...</span>
+                                    <div className="flex-1">
+                                        <span className="text-xs font-medium">Menangkap GPS...</span>
+                                        {gpsRetryCount > 0 && (
+                                            <div className="text-xs opacity-75 mt-0.5">Percobaan {gpsRetryCount}/3</div>
+                                        )}
+                                    </div>
                                 </>
                             ) : gpsData ? (
                                 <>
-                                    <CheckCircle size={16} />
-                                    <span className="text-xs">GPS: {gpsData.latitude.toFixed(6)}, {gpsData.longitude.toFixed(6)}</span>
+                                    {gpsData.accuracy > 100 ? (
+                                        <AlertTriangle size={16} />
+                                    ) : (
+                                        <CheckCircle size={16} />
+                                    )}
+                                    <div className="flex-1">
+                                        <div className="text-xs font-semibold">GPS: {gpsData.latitude.toFixed(6)}, {gpsData.longitude.toFixed(6)}</div>
+                                        {gpsData.accuracy && (
+                                            <div className="text-xs opacity-75">
+                                                Akurasi: ±{gpsData.accuracy.toFixed(0)}m
+                                                {gpsData.accuracy > 100 && ' (Kurang Akurat)'}
+                                                {gpsData.accuracy <= 50 && gpsData.accuracy > 20 && ' (Cukup Baik)'}
+                                                {gpsData.accuracy <= 20 && ' (Sangat Baik)'}
+                                            </div>
+                                        )}
+                                    </div>
                                 </>
                             ) : (
                                 <>

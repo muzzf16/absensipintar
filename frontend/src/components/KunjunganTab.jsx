@@ -167,12 +167,17 @@ const KunjunganTab = () => {
                         longitude: position.coords.longitude
                     });
                     setGpsLoading(false);
-                    alert(`GPS berhasil ditangkap!\nLat: ${position.coords.latitude.toFixed(6)}\nLng: ${position.coords.longitude.toFixed(6)}`);
+                    alert(`GPS berhasil ditangkap!\nLat: ${position.coords.latitude.toFixed(6)}\nLng: ${position.coords.longitude.toFixed(6)}\nAkurasi: ${position.coords.accuracy.toFixed(0)}m`);
                 },
                 (error) => {
                     setGpsLoading(false);
                     alert('Gagal mendapatkan lokasi GPS. Pastikan GPS aktif dan izin lokasi diberikan.');
                     console.error('GPS Error:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
             );
         } else {
@@ -568,6 +573,51 @@ const KunjunganTab = () => {
                             />
                         </div>
 
+                        {/* Photo Capture - Moved up for better visibility */}
+                        <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
+                            <label className="block text-xs font-bold text-blue-900 mb-2 flex items-center gap-2">
+                                <Camera size={14} />
+                                Foto Kunjungan *
+                            </label>
+
+                            {formData.photoUrl ? (
+                                <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                                    <img src={formData.photoUrl} alt="Visit Proof" className="w-full h-48 object-cover" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, photoUrl: '' })}
+                                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                    <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] p-1 text-center">
+                                        Foto berhasil diambil
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleOpenCamera}
+                                    className="w-full border-2 border-dashed border-blue-300 bg-white rounded-xl p-6 flex flex-col items-center justify-center hover:bg-blue-50 transition active:scale-95"
+                                >
+                                    <Camera size={32} className="mb-2 text-blue-600" />
+                                    <span className="text-sm font-bold text-blue-900">
+                                        📸 Ambil Foto Kunjungan
+                                    </span>
+                                    <span className="text-xs text-blue-700 mt-1">
+                                        Klik untuk buka kamera
+                                    </span>
+                                </button>
+                            )}
+
+                            {!formData.photoUrl && (
+                                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                    <AlertCircle size={12} />
+                                    Foto wajib disertakan
+                                </p>
+                            )}
+                        </div>
+
                         {/* GPS Capture */}
                         <div>
                             <label className="block text-xs font-bold text-gray-700 mb-1">Lokasi GPS *</label>
@@ -599,45 +649,6 @@ const KunjunganTab = () => {
                                 <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                                     <AlertCircle size={12} />
                                     Lokasi GPS wajib untuk validasi kunjungan
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Photo Capture */}
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1">Foto Kunjungan *</label>
-
-                            {formData.photoUrl ? (
-                                <div className="relative rounded-xl overflow-hidden border border-gray-200">
-                                    <img src={formData.photoUrl} alt="Visit Proof" className="w-full h-48 object-cover" />
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, photoUrl: '' })}
-                                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                    <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] p-1 text-center">
-                                        Foto berhasil diambil
-                                    </div>
-                                </div>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={handleOpenCamera}
-                                    className="w-full border-2 border-dashed border-gray-200 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center hover:bg-gray-100 transition"
-                                >
-                                    <Camera size={24} className="mb-2 text-gray-400" />
-                                    <span className="text-xs text-gray-600">
-                                        Klik untuk ambil Foto Selfie / Lokasi
-                                    </span>
-                                </button>
-                            )}
-
-                            {!formData.photoUrl && (
-                                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                                    <AlertCircle size={12} />
-                                    Foto wajib disertakan
                                 </p>
                             )}
                         </div>
