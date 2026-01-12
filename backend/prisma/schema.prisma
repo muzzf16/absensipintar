@@ -19,9 +19,10 @@ model User {
   officeId  String?
   office    Office?  @relation(fields: [officeId], references: [id])
 
-  attendances Attendance[]
-  visits      Visit[]
-  approvals   Approval[]
+  attendances   Attendance[]
+  visits        Visit[]
+  approvals     Approval[]
+  notifications Notification[]
 }
 
 model Office {
