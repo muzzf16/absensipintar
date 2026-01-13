@@ -9,6 +9,18 @@ const uploadBilling = async (req, res) => {
             return res.status(400).json({ message: 'Please upload a CSV file' });
         }
 
+        // Get officeId from request body
+        const { officeId } = req.body;
+        if (!officeId) {
+            return res.status(400).json({ message: 'Pilih kantor terlebih dahulu' });
+        }
+
+        // Verify office exists
+        const office = await prisma.office.findUnique({ where: { id: officeId } });
+        if (!office) {
+            return res.status(400).json({ message: 'Kantor tidak ditemukan' });
+        }
+
         const results = [];
         fs.createReadStream(req.file.path)
             .pipe(csv())
@@ -43,6 +55,7 @@ const uploadBilling = async (req, res) => {
 
                         return prisma.billing.create({
                             data: {
+                                officeId,  // Link to office
                                 customerName,
                                 principal,
                                 interest,
@@ -59,7 +72,7 @@ const uploadBilling = async (req, res) => {
                     // Cleanup file
                     fs.unlinkSync(req.file.path);
 
-                    res.status(201).json({ message: `Successfully uploaded ${results.length} billing records` });
+                    res.status(201).json({ message: `Berhasil upload ${results.length} data tagihan untuk ${office.name}` });
                 } catch (error) {
                     console.error("Error inserting billing data:", error);
                     res.status(500).json({ message: 'Error processing CSV data', error: error.message });
@@ -74,9 +87,26 @@ const uploadBilling = async (req, res) => {
 
 const getActiveBillings = async (req, res) => {
     try {
+        const { userId, role } = req.user;
+        let where = { isPaid: false };
+
+        // Filter by user's office
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { officeId: true }
+        });
+
+        if (user?.officeId) {
+            where.officeId = user.officeId;
+        }
+
+        // Admin can see all if no office assigned
+        // Supervisor and karyawan only see their office billings
+
         const billings = await prisma.billing.findMany({
-            where: { isPaid: false },
-            orderBy: { dueDate: 'asc' }
+            where,
+            orderBy: { dueDate: 'asc' },
+            include: { office: { select: { name: true } } }
         });
         res.json(billings);
     } catch (error) {

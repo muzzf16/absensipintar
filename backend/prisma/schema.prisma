@@ -41,6 +41,7 @@ model Office {
   blockAfterTime   String   @default("12:00")  // Latest check-in allowed
   
   users     User[]
+  billings  Billing[]
 }
 
 model Attendance {
@@ -114,6 +115,7 @@ model VisitProduct {
 
 model Billing {
   id           String   @id @default(uuid())
+  officeId     String?  // Optional for backward compatibility
   customerName String
   principal    Float    // Pokok
   interest     Float    // Bunga
@@ -122,6 +124,8 @@ model Billing {
   dueDate      DateTime
   isPaid       Boolean  @default(false)
   uploadedAt   DateTime @default(now())
+  
+  office       Office?  @relation(fields: [officeId], references: [id])
 }
 
 model Approval {
