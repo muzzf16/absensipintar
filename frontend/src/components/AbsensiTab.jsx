@@ -87,6 +87,10 @@ const AbsensiTab = ({ user }) => {
         }
     };
 
+    // Detect if user is on mobile device
+    const isMobileDevice = () => {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    };
 
     const captureGPS = (isRetry = false) => {
         if (!isRetry) {
@@ -104,9 +108,10 @@ const AbsensiTab = ({ user }) => {
                         accuracy: accuracy
                     };
 
-                    // Check GPS accuracy quality
-                    if (accuracy > 100 && gpsRetryCount < 3) {
-                        // Poor accuracy, auto-retry
+                    // Only validate GPS accuracy on mobile devices
+                    // PC/Desktop: skip validation, accept any accuracy
+                    if (isMobileDevice() && accuracy > 100 && gpsRetryCount < 3) {
+                        // Poor accuracy on mobile, auto-retry
                         setGpsRetryCount(prev => prev + 1);
                         setGpsLoading(false);
 
@@ -118,13 +123,13 @@ const AbsensiTab = ({ user }) => {
                         return;
                     }
 
-                    // Accept GPS (either good accuracy or max retries reached)
+                    // Accept GPS
                     setGpsData(gpsResult);
                     setGpsLoading(false);
                     setGpsRetryCount(0);
 
-                    // Warn user if accuracy is still poor after retries
-                    if (accuracy > 100) {
+                    // Only warn about poor accuracy on mobile devices
+                    if (isMobileDevice() && accuracy > 100) {
                         alert(`⚠️ Peringatan: GPS kurang akurat (±${accuracy.toFixed(0)}m)\n\nUntuk akurasi terbaik:\n- Keluar ruangan atau dekat jendela\n- Pastikan GPS device aktif\n- Tunggu beberapa detik lagi`);
                     }
                 },
@@ -245,7 +250,8 @@ const AbsensiTab = ({ user }) => {
             const response = await api.post(endpoint, {
                 photoUrl: capturedPhoto,
                 latitude: gpsData.latitude,
-                longitude: gpsData.longitude
+                longitude: gpsData.longitude,
+                gpsAccuracy: gpsData.accuracy || 0
             });
 
             console.log('Response:', response.data);
@@ -390,12 +396,12 @@ const AbsensiTab = ({ user }) => {
 
                         {/* GPS Status */}
                         <div className={`p-3 rounded-lg mb-4 flex items-center gap-2 ${gpsData
-                                ? gpsData.accuracy > 100
-                                    ? 'bg-red-50 text-red-700 border border-red-200'
-                                    : gpsData.accuracy > 50
-                                        ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                                        : 'bg-green-50 text-green-700 border border-green-200'
-                                : 'bg-blue-50 text-blue-700'
+                            ? gpsData.accuracy > 100
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : gpsData.accuracy > 50
+                                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                    : 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-blue-50 text-blue-700'
                             }`}>
                             {gpsLoading ? (
                                 <>

@@ -100,24 +100,31 @@ const KunjunganTab = () => {
     const handleOpenCamera = async () => {
         setShowCamera(true);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }, // Default to back camera for visits
-                audio: false
-            });
-            setCameraStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-        } catch (err) {
-            // Fallback to user camera if environment fails (e.g. laptop)
+            // First try back camera (for visit photos), fallback to any camera
+            let stream;
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                setCameraStream(stream);
-                if (videoRef.current) videoRef.current.srcObject = stream;
-            } catch (error) {
-                alert('Gagal mengakses kamera. Pastikan izin kamera diberikan.');
-                setShowCamera(false);
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
+            } catch (err) {
+                // Fallback to any available camera (e.g., laptop webcam)
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             }
+
+            setCameraStream(stream);
+
+            // Wait a bit for video element to be mounted, then set srcObject
+            setTimeout(() => {
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+            }, 100);
+
+        } catch (error) {
+            console.error('Camera error:', error);
+            alert('Gagal mengakses kamera. Pastikan izin kamera diberikan dan tidak ada aplikasi lain menggunakan kamera.');
+            setShowCamera(false);
         }
     };
 
@@ -668,30 +675,36 @@ const KunjunganTab = () => {
                 </div>
             )}
 
-            {/* Camera Modal */}
+            {/* Camera Modal - Same style as AbsensiTab */}
             {showCamera && (
-                <div className="fixed inset-0 bg-black z-50 flex flex-col">
-                    <div className="relative flex-1 bg-black">
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            className="w-full h-full object-cover"
-                        />
-                        {/* Close Button */}
-                        <button
-                            onClick={closeCamera}
-                            className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full"
-                        >
-                            <X size={24} />
-                        </button>
-                    </div>
-                    <div className="p-6 bg-black flex justify-center pb-10">
+                <div className="fixed inset-0 bg-black bg-opacity-90 z-[9999] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg">
+                                📸 Ambil Foto Kunjungan
+                            </h3>
+                            <button onClick={closeCamera} className="p-2 hover:bg-gray-100 rounded-full">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Camera/Photo Preview */}
+                        <div className="relative bg-gray-900 rounded-xl overflow-hidden mb-4" style={{ aspectRatio: '4/3' }}>
+                            <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+
+                        {/* Take Photo Button */}
                         <button
                             onClick={takePhoto}
-                            className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center bg-white/20 active:bg-white/50 transition"
+                            className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition"
                         >
-                            <div className="w-12 h-12 bg-white rounded-full"></div>
+                            <Camera size={20} />
+                            Ambil Foto
                         </button>
                     </div>
                 </div>

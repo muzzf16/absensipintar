@@ -31,6 +31,9 @@ const checkIn = async (req, res) => {
             include: { office: true }
         });
 
+        // Get GPS accuracy from request (sent from frontend)
+        const gpsAccuracy = req.body.gpsAccuracy || 0;
+
         if (user.office) {
             const distance = getDistanceFromLatLonInMeters(
                 parseFloat(user.office.latitude),
@@ -39,9 +42,11 @@ const checkIn = async (req, res) => {
                 parseFloat(longitude)
             );
 
-            console.log(`Office: ${user.office.name}, Radius: ${user.office.radius}m, Distance: ${distance.toFixed(2)}m`);
+            console.log(`Office: ${user.office.name}, Radius: ${user.office.radius}m, Distance: ${distance.toFixed(2)}m, GPS Accuracy: ${gpsAccuracy}m`);
 
-            if (distance > user.office.radius) {
+            // Skip radius validation if GPS accuracy is very poor (>1000m = likely PC/desktop)
+            // Only validate on mobile devices with good GPS accuracy
+            if (gpsAccuracy < 1000 && distance > user.office.radius) {
                 return res.status(400).json({
                     message: `Anda berada di luar radius kantor (${distance.toFixed(0)}m). Maksimal ${user.office.radius}m.`
                 });
