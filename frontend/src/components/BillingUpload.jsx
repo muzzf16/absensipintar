@@ -1,20 +1,33 @@
-import React, { useState } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, FileText, CheckCircle, AlertCircle, Building } from 'lucide-react';
 import api from '../utils/axiosConfig';
 
 const BillingUpload = () => {
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [status, setStatus] = useState(null); // success | error
+    const [offices, setOffices] = useState([]);
+    const [selectedOffice, setSelectedOffice] = useState('');
+
+    useEffect(() => {
+        fetchOffices();
+    }, []);
+
+    const fetchOffices = async () => {
+        try {
+            const res = await api.get('/offices');
+            setOffices(res.data);
+            if (res.data.length > 0) {
+                setSelectedOffice(res.data[0].id);
+            }
+        } catch (err) {
+            console.error('Failed to fetch offices:', err);
+        }
+    };
 
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
-        setStatus(null); // Keep original status clearing
-        // The instruction asked to add setMessage(''), but no 'message' state is defined.
-        // Assuming the intent was to clear the status, which is already handled by setStatus(null).
-        // If a separate 'message' state is intended, it needs to be defined first.
-        // For now, I will keep the existing setStatus(null) as it's functionally equivalent
-        // to clearing a message related to upload status.
+        setStatus(null);
     };
 
     const handleDownloadTemplate = () => {
@@ -37,25 +50,27 @@ Ahmad Wijaya,7500000,375000,0,7875000,2026-01-25`;
     };
 
     const handleUpload = async () => {
+        if (!selectedOffice) return alert('Pilih kantor terlebih dahulu');
         if (!file) return alert('Pilih file CSV terlebih dahulu');
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('officeId', selectedOffice);
 
         setUploading(true);
         setStatus(null);
 
         try {
-            await api.post('/billing/upload', formData, {
+            const res = await api.post('/billing/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setStatus('success');
             setFile(null);
-            alert('Data tagihan berhasil diupload!');
+            alert(res.data.message || 'Data tagihan berhasil diupload!');
         } catch (error) {
             console.error(error);
             setStatus('error');
-            alert('Gagal upload data tagihan');
+            alert(error.response?.data?.message || 'Gagal upload data tagihan');
         } finally {
             setUploading(false);
         }
@@ -67,6 +82,23 @@ Ahmad Wijaya,7500000,375000,0,7875000,2026-01-25`;
                 <FileText className="text-blue-600" size={20} />
                 Upload Data Tagihan Angsuran
             </h3>
+
+            {/* Office Selector */}
+            <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <Building size={16} />
+                    Pilih Kantor Tujuan
+                </label>
+                <select
+                    value={selectedOffice}
+                    onChange={(e) => setSelectedOffice(e.target.value)}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                    {offices.map(office => (
+                        <option key={office.id} value={office.id}>{office.name}</option>
+                    ))}
+                </select>
+            </div>
 
             <div className="flex items-center gap-4 border-2 border-dashed border-gray-200 rounded-xl p-8 bg-gray-50 hover:bg-gray-100 transition">
                 <input
@@ -100,8 +132,8 @@ Ahmad Wijaya,7500000,375000,0,7875000,2026-01-25`;
             {file && (
                 <button
                     onClick={handleUpload}
-                    disabled={uploading}
-                    className={`mt-4 w-full py-3 rounded-lg font-bold transition flex items-center justify-center gap-2 ${uploading
+                    disabled={uploading || !selectedOffice}
+                    className={`mt-4 w-full py-3 rounded-lg font-bold transition flex items-center justify-center gap-2 ${uploading || !selectedOffice
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'
                         }`}
@@ -125,3 +157,4 @@ Ahmad Wijaya,7500000,375000,0,7875000,2026-01-25`;
 };
 
 export default BillingUpload;
+
