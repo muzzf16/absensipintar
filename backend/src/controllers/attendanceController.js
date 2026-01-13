@@ -51,6 +51,27 @@ const checkIn = async (req, res) => {
                     message: `Anda berada di luar radius kantor (${distance.toFixed(0)}m). Maksimal ${user.office.radius}m.`
                 });
             }
+
+            // Check-in time blocking validation
+            if (user.office.enableBlocking) {
+                const currentTime = new Date();
+                const currentHour = currentTime.getHours();
+                const currentMinute = currentTime.getMinutes();
+                const currentTimeMinutes = currentHour * 60 + currentMinute;
+
+                const [blockBeforeHour, blockBeforeMin] = user.office.blockBeforeTime.split(':').map(Number);
+                const [blockAfterHour, blockAfterMin] = user.office.blockAfterTime.split(':').map(Number);
+                const blockBeforeMinutes = blockBeforeHour * 60 + blockBeforeMin;
+                const blockAfterMinutes = blockAfterHour * 60 + blockAfterMin;
+
+                console.log(`Time Check: Current ${currentHour}:${currentMinute} (${currentTimeMinutes}min), Allowed: ${user.office.blockBeforeTime}-${user.office.blockAfterTime}`);
+
+                if (currentTimeMinutes < blockBeforeMinutes || currentTimeMinutes > blockAfterMinutes) {
+                    return res.status(400).json({
+                        message: `Check-in hanya diizinkan antara jam ${user.office.blockBeforeTime} - ${user.office.blockAfterTime}`
+                    });
+                }
+            }
         }
 
         console.log('Checking existing attendance...');
@@ -258,16 +279,50 @@ const getStats = async (req, res) => {
                     lte: endOfDay,
                 },
                 user: userFilter // Filter attendance by user's office
+            },
+            include: {
+                user: {
+                    include: { office: true }
+                }
             }
         });
 
         const presentCount = attendancesToday.length;
 
-        // Mocking 'late' calculation: Check-in after 9 AM
+        // Calculate 'late' based on office work schedule settings
         const lateCount = attendancesToday.filter(a => {
+            if (!a.checkIn || !a.user?.office) return false;
+
             const checkInTime = new Date(a.checkIn);
-            return checkInTime.getHours() >= 9;
+            const checkInHour = checkInTime.getHours();
+            const checkInMinute = checkInTime.getMinutes();
+            const checkInMinutes = checkInHour * 60 + checkInMinute;
+
+            const office = a.user.office;
+            const [startHour, startMin] = office.workStartTime.split(':').map(Number);
+            const workStartMinutes = startHour * 60 + startMin + office.gracePeriod;
+
+            return checkInMinutes > workStartMinutes;
         }).length;
+
+        // Calculate overtime (check-out after work end time)
+        let overtimeMinutes = 0;
+        attendancesToday.forEach(a => {
+            if (!a.checkOut || !a.user?.office) return;
+
+            const checkOutTime = new Date(a.checkOut);
+            const checkOutHour = checkOutTime.getHours();
+            const checkOutMinute = checkOutTime.getMinutes();
+            const checkOutMinutes = checkOutHour * 60 + checkOutMinute;
+
+            const office = a.user.office;
+            const [endHour, endMin] = office.workEndTime.split(':').map(Number);
+            const workEndMinutes = endHour * 60 + endMin;
+
+            if (checkOutMinutes > workEndMinutes) {
+                overtimeMinutes += (checkOutMinutes - workEndMinutes);
+            }
+        });
 
         const visitCount = await prisma.visit.count({
             where: {
@@ -283,7 +338,8 @@ const getStats = async (req, res) => {
             totalEmployees,
             presentCount,
             lateCount,
-            visitCount
+            visitCount,
+            overtimeMinutes
         });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching stats', error: error.message });

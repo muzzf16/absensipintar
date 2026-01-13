@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Clock, Briefcase, Download, CheckCircle, Users, MapPin, Building } from 'lucide-react';
+import { LogOut, Clock, Briefcase, Download, CheckCircle, Users, MapPin, Building, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/axiosConfig';
 import MapComponent from '../components/MapComponent';
@@ -7,6 +7,7 @@ import AdminVisitDashboard from '../components/AdminVisitDashboard';
 import OfficeManagement from '../components/OfficeManagement';
 import UserManagement from '../components/UserManagement';
 import NotificationDropdown from '../components/NotificationDropdown';
+import WorkScheduleSettings from '../components/WorkScheduleSettings';
 
 const AdminDashboard = ({ user }) => {
     const navigate = useNavigate();
@@ -210,12 +211,21 @@ const AdminDashboard = ({ user }) => {
                                     <Users size={14} />
                                     Karyawan
                                 </button>
+                                <button
+                                    onClick={() => setActiveTab('jamkerja')}
+                                    className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'jamkerja' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                                >
+                                    <Settings size={14} />
+                                    Jam Kerja
+                                </button>
                             </>
                         )}
                     </div>
 
-                    {/* Report Card / Map View / Office View */}
-                    {activeTab === 'kantor' ? (
+                    {/* Report Card / Map View / Office View / Work Schedule */}
+                    {activeTab === 'jamkerja' ? (
+                        <WorkScheduleSettings />
+                    ) : activeTab === 'kantor' ? (
                         <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4">
                             <OfficeManagement />
                         </div>

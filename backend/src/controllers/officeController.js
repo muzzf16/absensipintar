@@ -75,4 +75,70 @@ const deleteOffice = async (req, res) => {
     }
 };
 
-module.exports = { getAllOffices, createOffice, updateOffice, deleteOffice };
+// Get work schedule settings for an office
+const getWorkSchedule = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const office = await prisma.office.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                workStartTime: true,
+                workEndTime: true,
+                gracePeriod: true,
+                enableBlocking: true,
+                blockBeforeTime: true,
+                blockAfterTime: true
+            }
+        });
+
+        if (!office) {
+            return res.status(404).json({ message: 'Office not found' });
+        }
+
+        res.json(office);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching work schedule', error: error.message });
+    }
+};
+
+// Update work schedule settings for an office
+const updateWorkSchedule = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            workStartTime,
+            workEndTime,
+            gracePeriod,
+            enableBlocking,
+            blockBeforeTime,
+            blockAfterTime
+        } = req.body;
+
+        const office = await prisma.office.update({
+            where: { id },
+            data: {
+                workStartTime: workStartTime || '08:00',
+                workEndTime: workEndTime || '17:00',
+                gracePeriod: parseInt(gracePeriod) || 15,
+                enableBlocking: Boolean(enableBlocking),
+                blockBeforeTime: blockBeforeTime || '06:00',
+                blockAfterTime: blockAfterTime || '12:00'
+            }
+        });
+
+        res.json({ message: 'Work schedule updated successfully', office });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating work schedule', error: error.message });
+    }
+};
+
+module.exports = {
+    getAllOffices,
+    createOffice,
+    updateOffice,
+    deleteOffice,
+    getWorkSchedule,
+    updateWorkSchedule
+};

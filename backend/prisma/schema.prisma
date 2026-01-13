@@ -31,6 +31,15 @@ model Office {
   latitude  Float
   longitude Float
   radius    Int      @default(100) // in meters
+  
+  // Work Schedule Settings
+  workStartTime    String   @default("08:00")  // Format HH:mm
+  workEndTime      String   @default("17:00")  // Format HH:mm
+  gracePeriod      Int      @default(15)       // Minutes tolerance for late
+  enableBlocking   Boolean  @default(false)    // Block check-in outside hours
+  blockBeforeTime  String   @default("06:00")  // Earliest check-in allowed
+  blockAfterTime   String   @default("12:00")  // Latest check-in allowed
+  
   users     User[]
 }
 
