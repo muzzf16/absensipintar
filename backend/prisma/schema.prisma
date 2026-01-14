@@ -114,18 +114,21 @@ model VisitProduct {
 }
 
 model Billing {
-  id           String   @id @default(uuid())
-  officeId     String?  // Optional for backward compatibility
+  id           String    @id @default(uuid())
+  officeId     String?   // Optional for backward compatibility
   customerName String
-  principal    Float    // Pokok
-  interest     Float    // Bunga
-  penalty      Float    // Denda
+  principal    Float     // Pokok
+  interest     Float     // Bunga
+  penalty      Float     // Denda
   total        Float
   dueDate      DateTime
-  isPaid       Boolean  @default(false)
-  uploadedAt   DateTime @default(now())
+  isPaid       Boolean   @default(false)
+  paidAmount   Float?    // Jumlah yang dibayar
+  paidAt       DateTime? // Tanggal pembayaran
+  paidNote     String?   // Catatan pembayaran
+  uploadedAt   DateTime  @default(now())
   
-  office       Office?  @relation(fields: [officeId], references: [id])
+  office       Office?   @relation(fields: [officeId], references: [id])
 }
 
 model Approval {

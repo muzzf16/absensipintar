@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Download, Filter, MapPin, Calendar, User } from 'lucide-react';
 import api from '../utils/axiosConfig';
 import BillingUpload from './BillingUpload';
+import BillingManagement from './BillingManagement';
 
 const AdminVisitDashboard = () => {
     const [visits, setVisits] = useState([]);
@@ -128,6 +129,7 @@ const AdminVisitDashboard = () => {
     return (
         <div className="space-y-6">
             <BillingUpload />
+            <BillingManagement />
 
             <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">

@@ -57,12 +57,21 @@ Ahmad Wijaya,7500000,375000,0,7875000,2026-01-25`;
         formData.append('file', file);
         formData.append('officeId', selectedOffice);
 
+        console.log('File to upload:', file);
+        console.log('FormData entries:');
+        for (let pair of formData.entries()) {
+            console.log(pair[0], pair[1]);
+        }
+
         setUploading(true);
         setStatus(null);
 
         try {
+            console.log('Uploading with officeId:', selectedOffice);
             const res = await api.post('/billing/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
             });
             setStatus('success');
             setFile(null);
