@@ -123,7 +123,7 @@ const BillingManagement = () => {
                         : 'text-gray-500 hover:text-gray-700'}`}
                 >
                     <XCircle size={16} className="inline mr-2" />
-                    Belum Lunas
+                    Belum Bayar
                 </button>
                 <button
                     onClick={() => setActiveTab('paid')}
@@ -132,7 +132,7 @@ const BillingManagement = () => {
                         : 'text-gray-500 hover:text-gray-700'}`}
                 >
                     <CheckCircle size={16} className="inline mr-2" />
-                    Lunas
+                    Sudah Bayar
                 </button>
             </div>
 
@@ -145,7 +145,7 @@ const BillingManagement = () => {
                     </div>
                 ) : billings.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
-                        {activeTab === 'unpaid' ? 'Tidak ada tagihan yang belum lunas' : 'Tidak ada tagihan yang sudah lunas'}
+                        {activeTab === 'unpaid' ? 'Tidak ada tagihan yang belum bayar' : 'Tidak ada tagihan yang sudah bayar'}
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -189,7 +189,7 @@ const BillingManagement = () => {
                                             className="flex-1 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
                                         >
                                             <CheckCircle size={16} />
-                                            Tandai Lunas
+                                            Tandai Bayar
                                         </button>
                                     ) : (
                                         <button
@@ -211,7 +211,7 @@ const BillingManagement = () => {
             {showPayModal && selectedBilling && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4">Tandai Lunas</h3>
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Tandai Bayar</h3>
 
                         <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                             <p className="font-semibold">{selectedBilling.customerName}</p>
@@ -252,7 +252,7 @@ const BillingManagement = () => {
                                 onClick={handleMarkAsPaid}
                                 className="flex-1 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition"
                             >
-                                Konfirmasi Lunas
+                                Konfirmasi Bayar
                             </button>
                         </div>
                     </div>
