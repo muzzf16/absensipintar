@@ -1,18 +1,11 @@
 import axios from 'axios';
 
-// Determine API base URL dynamically for network access
-const getBaseURL = () => {
-    const hostname = window.location.hostname;
-    // Use the same hostname as the frontend, but connect to backend port
-    return `http://${hostname}:5000/api`;
-};
-
 const api = axios.create({
-    baseURL: getBaseURL(),
-    withCredentials: true, // Include credentials in cross-origin requests
+    baseURL: '/api',   // ⬅️ PENTING: relative path
+    withCredentials: true,
 });
 
-// Add a request interceptor to attach the token and handle Content-Type
+// Attach token & Content-Type handling
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -20,18 +13,16 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // Don't set Content-Type for FormData - let browser set it with boundary
+        // Let browser set multipart boundary
         if (config.data instanceof FormData) {
             delete config.headers['Content-Type'];
-        } else if (!config.headers['Content-Type']) {
+        } else {
             config.headers['Content-Type'] = 'application/json';
         }
 
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 export default api;
