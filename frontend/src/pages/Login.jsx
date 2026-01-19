@@ -49,8 +49,8 @@ const Login = () => {
                         <img src="/bapera.jpg" alt="BAPERA Logo" className="w-16 h-16 object-contain" />
                     </div>
                 </div>
-                <h1 className="text-3xl font-bold mb-1">Absensi Mobile</h1>
-                <p className="text-blue-100 text-sm">Sistem absensi karyawan terintegrasi</p>
+                <h1 className="text-3xl font-bold mb-1">Presensi Mobile</h1>
+                <p className="text-blue-100 text-sm">Sistem presensi karyawan terintegrasi</p>
             </div>
 
             {/* Main Content Card */}

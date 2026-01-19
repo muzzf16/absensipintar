@@ -38,7 +38,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 app.get('/', (req, res) => {
-    res.send('AbsensiPintar API is running');
+    res.send('PresensiPintar API is running');
 });
 
 // Error handling middleware

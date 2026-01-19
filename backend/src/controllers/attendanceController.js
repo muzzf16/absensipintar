@@ -110,7 +110,7 @@ const checkIn = async (req, res) => {
             // Don't await to avoid blocking response
             notifySupervisor(
                 user.officeId,
-                'Absensi Masuk',
+                'Presensi Masuk',
                 `${user.name} baru saja melakukan Check In.`,
                 'success',
                 attendance.id
@@ -182,7 +182,7 @@ const checkOut = async (req, res) => {
             const { notifySupervisor } = require('../services/notificationService');
             notifySupervisor(
                 user.officeId,
-                'Absensi Pulang',
+                'Presensi Pulang',
                 `${user.name} baru saja melakukan Check Out.`,
                 'info',
                 updatedAttendance.id

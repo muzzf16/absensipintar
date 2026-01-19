@@ -7,7 +7,7 @@ const PDFDocument = require('pdfkit');
  * @returns {PDFDocument} PDF document stream
  */
 const generateVisitsPDF = (visits, filters = {}) => {
-    const doc = new PDFDocument({ 
+    const doc = new PDFDocument({
         size: 'A4',
         margin: 50,
         bufferPages: true
@@ -15,51 +15,51 @@ const generateVisitsPDF = (visits, filters = {}) => {
 
     // Header
     doc.fontSize(20)
-       .font('Helvetica-Bold')
-       .text('Laporan Kunjungan Nasabah', { align: 'center' })
-       .moveDown(0.5);
+        .font('Helvetica-Bold')
+        .text('Laporan Kunjungan Nasabah', { align: 'center' })
+        .moveDown(0.5);
 
     doc.fontSize(10)
-       .font('Helvetica')
-       .text('Absensi Pintar & Kunjungan Nasabah', { align: 'center' })
-       .moveDown(0.3);
+        .font('Helvetica')
+        .text('Presensi Pintar & Kunjungan Nasabah', { align: 'center' })
+        .moveDown(0.3);
 
     // Report Info
     const now = new Date();
     doc.fontSize(9)
-       .text(`Tanggal Cetak: ${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`, { align: 'center' })
-       .moveDown(0.5);
+        .text(`Tanggal Cetak: ${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID')}`, { align: 'center' })
+        .moveDown(0.5);
 
     // Filters Info
     if (filters.startDate || filters.endDate || filters.userId || filters.customerId) {
         doc.fontSize(9)
-           .font('Helvetica-Bold')
-           .text('Filter:', 50, doc.y);
-        
+            .font('Helvetica-Bold')
+            .text('Filter:', 50, doc.y);
+
         if (filters.startDate) {
             doc.font('Helvetica')
-               .text(`  Dari: ${new Date(filters.startDate).toLocaleDateString('id-ID')}`, 50, doc.y);
+                .text(`  Dari: ${new Date(filters.startDate).toLocaleDateString('id-ID')}`, 50, doc.y);
         }
         if (filters.endDate) {
             doc.font('Helvetica')
-               .text(`  Sampai: ${new Date(filters.endDate).toLocaleDateString('id-ID')}`, 50, doc.y);
+                .text(`  Sampai: ${new Date(filters.endDate).toLocaleDateString('id-ID')}`, 50, doc.y);
         }
         if (filters.userId) {
             doc.font('Helvetica')
-               .text(`  User ID: ${filters.userId}`, 50, doc.y);
+                .text(`  User ID: ${filters.userId}`, 50, doc.y);
         }
         if (filters.customerId) {
             doc.font('Helvetica')
-               .text(`  Customer ID: ${filters.customerId}`, 50, doc.y);
+                .text(`  Customer ID: ${filters.customerId}`, 50, doc.y);
         }
         doc.moveDown(1);
     }
 
     // Horizontal line
     doc.moveTo(50, doc.y)
-       .lineTo(545, doc.y)
-       .stroke()
-       .moveDown(0.5);
+        .lineTo(545, doc.y)
+        .stroke()
+        .moveDown(0.5);
 
     // Summary Statistics
     const approvedCount = visits.filter(v => v.status === 'approved').length;
@@ -67,14 +67,14 @@ const generateVisitsPDF = (visits, filters = {}) => {
     const rejectedCount = visits.filter(v => v.status === 'rejected').length;
 
     doc.fontSize(10)
-       .font('Helvetica-Bold')
-       .text('Ringkasan:', 50, doc.y)
-       .font('Helvetica')
-       .text(`Total Kunjungan: ${visits.length}`, 50, doc.y)
-       .text(`Disetujui: ${approvedCount}`, 50, doc.y)
-       .text(`Pending: ${pendingCount}`, 50, doc.y)
-       .text(`Ditolak: ${rejectedCount}`, 50, doc.y)
-       .moveDown(1);
+        .font('Helvetica-Bold')
+        .text('Ringkasan:', 50, doc.y)
+        .font('Helvetica')
+        .text(`Total Kunjungan: ${visits.length}`, 50, doc.y)
+        .text(`Disetujui: ${approvedCount}`, 50, doc.y)
+        .text(`Pending: ${pendingCount}`, 50, doc.y)
+        .text(`Ditolak: ${rejectedCount}`, 50, doc.y)
+        .moveDown(1);
 
     // Table Header
     const tableTop = doc.y;
@@ -91,8 +91,8 @@ const generateVisitsPDF = (visits, filters = {}) => {
     let currentX = 50;
 
     doc.fontSize(9)
-       .font('Helvetica-Bold')
-       .text('No', currentX, tableTop, { width: colWidths.no });
+        .font('Helvetica-Bold')
+        .text('No', currentX, tableTop, { width: colWidths.no });
     currentX += colWidths.no;
 
     doc.text('Tanggal', currentX, tableTop, { width: colWidths.date });
@@ -116,14 +116,14 @@ const generateVisitsPDF = (visits, filters = {}) => {
 
     // Horizontal line under header
     doc.moveTo(50, doc.y)
-       .lineTo(545, doc.y)
-       .stroke()
-       .moveDown(0.3);
+        .lineTo(545, doc.y)
+        .stroke()
+        .moveDown(0.3);
 
     // Table Rows
     visits.forEach((visit, index) => {
         const rowY = doc.y;
-        
+
         // Check if we need a new page
         if (rowY > 700) {
             doc.addPage();
@@ -133,8 +133,8 @@ const generateVisitsPDF = (visits, filters = {}) => {
         currentX = 50;
 
         doc.fontSize(8)
-           .font('Helvetica')
-           .text((index + 1).toString(), currentX, doc.y, { width: colWidths.no });
+            .font('Helvetica')
+            .text((index + 1).toString(), currentX, doc.y, { width: colWidths.no });
         currentX += colWidths.no;
 
         const visitDate = new Date(visit.visitTime);
@@ -173,25 +173,25 @@ const generateVisitsPDF = (visits, filters = {}) => {
     const pages = doc.bufferedPageRange();
     for (let i = 0; i < pages.count; i++) {
         doc.switchToPage(i);
-        
+
         // Page number at bottom
         doc.fontSize(8)
-           .font('Helvetica')
-           .text(
-               `Halaman ${i + 1} dari ${pages.count}`,
-               50,
-               doc.page.height - 50,
-               { align: 'center' }
-           );
+            .font('Helvetica')
+            .text(
+                `Halaman ${i + 1} dari ${pages.count}`,
+                50,
+                doc.page.height - 50,
+                { align: 'center' }
+            );
 
         // Company info at bottom
         doc.fontSize(7)
-           .text(
-               'Absensi Pintar © 2026 - Laporan ini digenerate secara otomatis',
-               50,
-               doc.page.height - 35,
-               { align: 'center' }
-           );
+            .text(
+                'Presensi Pintar © 2026 - Laporan ini digenerate secara otomatis',
+                50,
+                doc.page.height - 35,
+                { align: 'center' }
+            );
     }
 
     return doc;

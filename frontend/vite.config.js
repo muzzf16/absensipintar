@@ -15,9 +15,9 @@ export default defineConfig({
       },
       includeAssets: ['bapera.jpg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'AbsensiPintar - BAPERA',
-        short_name: 'AbsensiPintar',
-        description: 'Aplikasi Absensi dan Kunjungan Nasabah PT. BPR BAPERA BATANG',
+        name: 'PresensiPintar - BAPERA',
+        short_name: 'PresensiPintar',
+        description: 'Aplikasi Presensi dan Kunjungan Nasabah PT. BPR BAPERA BATANG',
         theme_color: '#3B82F6',
         background_color: '#3B82F6',
         display: 'standalone',

@@ -183,8 +183,8 @@ const Visits = () => {
                 <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-xl mb-4 flex items-start gap-3">
                     <AlertCircle size={24} className="flex-shrink-0" />
                     <div>
-                        <p className="font-bold">Absensi Required</p>
-                        <p className="text-sm">You must Clock In (Absen Masuk) first to start visiting customers.</p>
+                        <p className="font-bold">Presensi Required</p>
+                        <p className="text-sm">You must Clock In (Presensi Masuk) first to start visiting customers.</p>
                     </div>
                 </div>
             )}

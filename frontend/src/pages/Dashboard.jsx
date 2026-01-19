@@ -6,7 +6,7 @@ import KunjunganTab from '../components/KunjunganTab';
 import AdminDashboard from './AdminDashboard';
 
 const EmployeeDashboard = ({ user, handleLogout }) => {
-    const [activeTab, setActiveTab] = useState('absensi'); // absensi or kunjungan
+    const [activeTab, setActiveTab] = useState('presensi'); // presensi or kunjungan
 
     return (
         <div className="min-h-screen bg-white pb-20">
@@ -40,10 +40,10 @@ const EmployeeDashboard = ({ user, handleLogout }) => {
             <div className="px-6 pt-4">
                 <div className="bg-gray-50 p-1 rounded-xl flex">
                     <button
-                        onClick={() => setActiveTab('absensi')}
-                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'absensi' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                        onClick={() => setActiveTab('presensi')}
+                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'presensi' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                     >
-                        Absensi
+                        Presensi
                     </button>
                     <button
                         onClick={() => setActiveTab('kunjungan')}
@@ -56,7 +56,7 @@ const EmployeeDashboard = ({ user, handleLogout }) => {
 
             {/* Tab Content */}
             <div className="p-6">
-                {activeTab === 'absensi' ? (
+                {activeTab === 'presensi' ? (
                     <AbsensiTab user={user} />
                 ) : (
                     <KunjunganTab user={user} />

@@ -12,7 +12,7 @@ import WorkScheduleSettings from '../components/WorkScheduleSettings';
 const AdminDashboard = ({ user }) => {
     const navigate = useNavigate();
     const [stats, setStats] = useState({ totalEmployees: 0, presentCount: 0, lateCount: 0, visitCount: 0 });
-    const [activeTab, setActiveTab] = useState('absensi'); // absensi, kunjungan, peta, kantor, karyawan
+    const [activeTab, setActiveTab] = useState('presensi'); // presensi, kunjungan, peta, kantor, karyawan
     const [attendanceList, setAttendanceList] = useState([]);
     const [visitList, setVisitList] = useState([]);
 
@@ -44,7 +44,7 @@ const AdminDashboard = ({ user }) => {
 
     const fetchData = async () => {
         try {
-            if (activeTab === 'absensi') {
+            if (activeTab === 'presensi') {
                 const res = await api.get('/attendance/all');
                 setAttendanceList(res.data);
             } else {
@@ -78,7 +78,7 @@ const AdminDashboard = ({ user }) => {
             link.click();
             link.parentNode.removeChild(link);
 
-            alert('Data absensi berhasil di-export!');
+            alert('Data presensi berhasil di-export!');
         } catch (error) {
             console.error('Export error:', error);
             alert('Gagal export data: ' + (error.response?.data?.message || error.message));
@@ -173,11 +173,11 @@ const AdminDashboard = ({ user }) => {
                 <div className="pt-4">
                     <div className="bg-gray-50 p-1 rounded-xl flex mb-4 overflow-x-auto">
                         <button
-                            onClick={() => setActiveTab('absensi')}
-                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'absensi' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+                            onClick={() => setActiveTab('presensi')}
+                            className={`flex-1 min-w-[80px] py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'presensi' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
                         >
                             <Clock size={14} />
-                            Absensi
+                            Presensi
                         </button>
                         <button
                             onClick={() => setActiveTab('kunjungan')}
@@ -248,7 +248,7 @@ const AdminDashboard = ({ user }) => {
                                 <div className="flex justify-between items-center mb-4">
                                     <div>
                                         <h3 className="font-bold text-gray-800 text-sm">Laporan Kehadiran</h3>
-                                        <p className="text-[10px] text-gray-400">Daftar aktivitas absensi.</p>
+                                        <p className="text-[10px] text-gray-400">Daftar aktivitas presensi.</p>
                                     </div>
                                     <button onClick={handleExportAttendance} className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 hover:bg-gray-50">
                                         <Download size={12} />
@@ -262,7 +262,7 @@ const AdminDashboard = ({ user }) => {
                                             <tr className="text-[10px] text-gray-400 border-b border-gray-50">
                                                 <th className="pb-2 font-medium">Petugas</th>
                                                 <th className="pb-2 font-medium">Waktu</th>
-                                                {activeTab === 'absensi' ? (
+                                                {activeTab === 'presensi' ? (
                                                     <>
                                                         <th className="pb-2 font-medium">Masuk</th>
                                                         <th className="pb-2 font-medium">Status</th>
@@ -276,7 +276,7 @@ const AdminDashboard = ({ user }) => {
                                             </tr>
                                         </thead>
                                         <tbody className="text-xs">
-                                            {activeTab === 'absensi' ? (
+                                            {activeTab === 'presensi' ? (
                                                 attendanceList.length > 0 ? attendanceList.map((item, idx) => (
                                                     <tr key={idx} className="border-b border-gray-50 last:border-0">
                                                         <td className="py-3 pr-2">

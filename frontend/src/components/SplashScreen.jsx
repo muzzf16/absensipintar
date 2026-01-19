@@ -34,7 +34,7 @@ const SplashScreen = ({ onFinish }) => {
                     />
                 </div>
             </div>
-            <h1 className="text-white text-3xl font-bold mb-2">AbsensiPintar</h1>
+            <h1 className="text-white text-3xl font-bold mb-2">PresensiPintar</h1>
             <p className="text-blue-100 text-sm mb-8">PT. BPR BAPERA BATANG</p>
 
             {/* Loading spinner */}

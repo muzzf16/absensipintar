@@ -343,7 +343,7 @@ const AbsensiTab = ({ user }) => {
             {/* Photo Preview */}
             {(stats.checkInPhoto || stats.checkOutPhoto) && (
                 <div className="w-full bg-gray-50 rounded-xl p-4 border border-gray-100">
-                    <p className="text-xs font-bold text-gray-600 mb-3">Foto Absensi Hari Ini</p>
+                    <p className="text-xs font-bold text-gray-600 mb-3">Foto Presensi Hari Ini</p>
                     <div className="grid grid-cols-2 gap-3">
                         {stats.checkInPhoto && (
                             <div>
