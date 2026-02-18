@@ -6,7 +6,13 @@ const authenticateToken = (req, res, next) => {
 
     if (!token) return res.status(401).json({ message: 'Access denied' });
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        console.warn('JWT_SECRET is not set in environment variables');
+        return res.status(500).json({ message: 'Internal server error: Configuration missing' });
+    }
+
+    jwt.verify(token, secret, (err, user) => {
         if (err) return res.status(403).json({ message: 'Invalid token' });
         req.user = user;
         next();
